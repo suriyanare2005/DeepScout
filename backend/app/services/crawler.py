@@ -1,6 +1,6 @@
+import asyncio
 import hashlib
 import logging
-import time
 from datetime import datetime, timezone
 from firecrawl import FirecrawlApp
 from sqlalchemy import select
@@ -34,8 +34,8 @@ class CrawlerService:
         }
         
         try:
-            # Trigger async crawl
-            crawl_job = self.app.async_crawl_url(target_url, params=params)
+            # Use wait_until_done=False to get the job ID immediately without blocking
+            crawl_job = self.app.crawl_url(target_url, params=params, wait_until_done=False)
             job_id = crawl_job.get("id")
             if not job_id:
                 raise ValueError(f"Failed to obtain job ID from Firecrawl response: {crawl_job}")
@@ -106,7 +106,7 @@ class CrawlerService:
                 logger.warning(f"Error checking status for crawl job {job_id}: {e}")
                 # Don't fail immediately, try again in next poll
                 
-            time.sleep(poll_interval)
+            await asyncio.sleep(poll_interval)
             attempts += 1
             
         # Timeout reached
@@ -148,9 +148,10 @@ class CrawlerService:
         duplicate_count = 0
         
         for page in pages:
-            url = page.get("url")
-            markdown_content = page.get("markdown", "")
+            # Firecrawl v1: URL lives inside metadata, not at the top level
             metadata = page.get("metadata", {})
+            url = metadata.get("url") or metadata.get("sourceURL") or page.get("url")
+            markdown_content = page.get("markdown", "")
             title = metadata.get("title", "Untitled Page")
             
             if not url or not markdown_content:

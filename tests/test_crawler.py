@@ -17,8 +17,8 @@ async def test_crawler_service_flow(mock_firecrawl_class):
     mock_app = MagicMock()
     mock_firecrawl_class.return_value = mock_app
     
-    # Mock async_crawl_url to return a mock job ID
-    mock_app.async_crawl_url.return_value = {"id": "mock-crawl-job-id-999"}
+    # Mock crawl_url(wait_until_done=False) to return a mock job ID
+    mock_app.crawl_url.return_value = {"id": "mock-crawl-job-id-999"}
     
     # Mock check_crawl_status to simulate completed state
     mock_app.check_crawl_status.return_value = {
@@ -71,11 +71,11 @@ async def test_crawler_service_flow(mock_firecrawl_class):
             # 2. Trigger job start
             job_id = await crawler.start_crawl_job(company.website_url)
             assert job_id == "mock-crawl-job-id-999"
-            mock_app.async_crawl_url.assert_called_once()
+            mock_app.crawl_url.assert_called_once()
             
             # 3. Simulate polling loop and process results
-            # Mock time.sleep inside poll_and_process_crawl to avoid actual delays
-            with patch("backend.app.services.crawler.time.sleep", return_value=None):
+            # Mock asyncio.sleep inside poll_and_process_crawl to avoid actual delays
+            with patch("backend.app.services.crawler.asyncio.sleep", return_value=None):
                 pages = await crawler.poll_and_process_crawl(
                     company_id=company.id,
                     job_id=job_id,

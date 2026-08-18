@@ -1,5 +1,7 @@
 import asyncio
 import logging
+import torch
+from sentence_transformers import SentenceTransformer
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 import httpx
@@ -9,17 +11,31 @@ from backend.app.db.models import Chunk
 logger = logging.getLogger("company_research_rag.embedding")
 
 class EmbeddingService:
+    _bge_model = None
+
     def __init__(self):
         self.provider = settings.EMBEDDING_PROVIDER.lower()
-        self.model = settings.EMBEDDING_MODEL
+        if self.provider == "gemini":
+            self.model = settings.EMBEDDING_MODEL if "gemini" in settings.EMBEDDING_MODEL else "models/gemini-embedding-exp-03-07"
+        else:
+            self.model = settings.EMBEDDING_MODEL
         
-        # We enforce exactly 768 dimensions for Gemini, and 1536 for OpenAI / others
-        self.target_dimension = 768 if self.provider == "gemini" else 1536
+        # We enforce exactly 768 dimensions for Gemini and BGE, 1536 for OpenAI
+        if self.provider in ("bge", "bge_local", "bge-base", "gemini"):
+            self.target_dimension = 768
+        else:
+            self.target_dimension = 1536
         
         if self.provider == "gemini" and not settings.GEMINI_API_KEY:
             raise ValueError("GEMINI_API_KEY is required for Gemini embeddings.")
         elif self.provider == "openai" and not settings.OPENAI_API_KEY:
             raise ValueError("OPENAI_API_KEY is required for OpenAI embeddings.")
+        elif self.provider in ("bge", "bge_local", "bge-base"):
+            if EmbeddingService._bge_model is None:
+                device = "cuda" if torch.cuda.is_available() else "cpu"
+                logger.info(f"Initializing local BGE embedding model '{self.model}' on device: {device}...")
+                EmbeddingService._bge_model = SentenceTransformer(self.model, device=device)
+            self.local_model = EmbeddingService._bge_model
 
     async def _post_with_retry(self, client: httpx.AsyncClient, url: str, json_data: dict, headers: dict = None, max_retries: int = 5) -> dict:
         """
@@ -57,6 +73,19 @@ class EmbeddingService:
         """
         if not texts:
             return []
+
+        if self.provider in ("bge", "bge_local", "bge-base"):
+            # Run local sentence transformer encode in threadpool to avoid blocking event loop
+            def _encode():
+                embeddings = self.local_model.encode(
+                    texts, 
+                    batch_size=32, 
+                    normalize_embeddings=True, 
+                    show_progress_bar=False
+                )
+                return [emb.tolist() for emb in embeddings]
+            
+            return await asyncio.to_thread(_encode)
 
         async with httpx.AsyncClient() as client:
             if self.provider == "gemini":
@@ -121,7 +150,7 @@ class EmbeddingService:
             
         logger.info(f"Generating embeddings for {len(chunks_to_embed)} chunks using provider: {self.provider}...")
         
-        # Batch requests in groups of 50 to avoid API payload limits
+        # Batch requests in groups of 50 to avoid API/memory limits
         batch_size = 50
         embedded_count = 0
         

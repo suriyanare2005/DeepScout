@@ -21,8 +21,8 @@ class Settings(BaseSettings):
     COHERE_API_KEY: str | None = None
 
     # Pipeline configurations
-    EMBEDDING_PROVIDER: str = "openai"
-    EMBEDDING_MODEL: str = "models/gemini-embedding-2"
+    EMBEDDING_PROVIDER: str = "bge"
+    EMBEDDING_MODEL: str = "BAAI/bge-base-en-v1.5"
     LLM_PROVIDER: str = "openai"
     LLM_MODEL: str = "models/gemini-3.5-flash"
     RERANKER_PROVIDER: str = "none"

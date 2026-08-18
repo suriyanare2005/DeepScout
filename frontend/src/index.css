@@ -1,0 +1,260 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap');
+
+:root {
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  color-scheme: dark;
+  color: #e2e8f0;
+  background-color: #0b0f19;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  /* HSL Color System */
+  --bg-main: 222 47% 5%;
+  --bg-card: 222 40% 8%;
+  --bg-card-hover: 222 35% 12%;
+  --primary: 263 90% 62%;
+  --primary-hover: 263 90% 70%;
+  --accent: 190 90% 50%;
+  --accent-green: 142 70% 50%;
+  --accent-red: 350 80% 60%;
+  --border: 217 25% 15%;
+  --text-muted: 215 15% 65%;
+  --text-main: 210 40% 98%;
+  
+  /* Gradients */
+  --grad-primary: linear-gradient(135deg, hsl(263 90% 62%) 0%, hsl(217 90% 60%) 100%);
+  --grad-glass: linear-gradient(135deg, rgba(17, 24, 39, 0.7) 0%, rgba(10, 15, 30, 0.8) 100%);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  scrollbar-width: thin;
+  scrollbar-color: hsl(217 25% 20%) transparent;
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: hsl(217 25% 20%);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(263 90% 62% / 0.5);
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: radial-gradient(circle at 50% 0%, hsl(263 70% 15% / 0.25) 0%, hsl(222 47% 5%) 100%);
+  overflow-x: hidden;
+}
+
+/* Glassmorphism utility card */
+.glass-card {
+  background: var(--grad-glass);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-card:hover {
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.45);
+}
+
+/* Modern buttons */
+.btn-primary {
+  background: var(--grad-primary);
+  color: #ffffff;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 10px;
+  font-weight: 600;
+  font-family: 'Outfit', sans-serif;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 15px rgba(124, 58, 237, 0.3);
+}
+
+.btn-primary:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(124, 58, 237, 0.5);
+  filter: brightness(1.1);
+}
+
+.btn-primary:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.btn-secondary {
+  background: rgba(255, 255, 255, 0.05);
+  color: hsl(var(--text-main));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 12px 24px;
+  border-radius: 10px;
+  font-weight: 500;
+  font-family: 'Inter', sans-serif;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.btn-secondary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Form elements */
+.input-field {
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 12px 16px;
+  border-radius: 10px;
+  color: #fff;
+  font-size: 15px;
+  outline: none;
+  transition: all 0.2s ease;
+  width: 100%;
+}
+
+.input-field:focus {
+  border-color: hsl(var(--primary));
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.2);
+  background: rgba(0, 0, 0, 0.3);
+}
+
+/* Pulsing loader animation for background processes */
+.pulse-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+  background: rgba(124, 58, 237, 0.15);
+  border: 1px solid rgba(124, 58, 237, 0.25);
+  color: hsl(var(--primary-hover));
+}
+
+.pulse-badge .dot {
+  width: 8px;
+  height: 8px;
+  background-color: hsl(var(--primary-hover));
+  border-radius: 50%;
+  animation: pulse-animation 1.5s infinite;
+}
+
+@keyframes pulse-animation {
+  0% {
+    transform: scale(0.85);
+    box-shadow: 0 0 0 0 rgba(168, 85, 247, 0.7);
+  }
+  70% {
+    transform: scale(1);
+    box-shadow: 0 0 0 6px rgba(168, 85, 247, 0);
+  }
+  100% {
+    transform: scale(0.85);
+    box-shadow: 0 0 0 0 rgba(168, 85, 247, 0);
+  }
+}
+
+/* Sidebar lists styling */
+.list-item-btn {
+  width: 100%;
+  padding: 14px 16px;
+  background: transparent;
+  border: none;
+  border-radius: 10px;
+  color: hsl(var(--text-muted));
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.list-item-btn:hover {
+  background: rgba(255, 255, 255, 0.03);
+  color: #fff;
+}
+
+.list-item-btn.active {
+  background: rgba(124, 58, 237, 0.1);
+  color: #fff;
+  border-left: 3px solid hsl(var(--primary));
+}
+
+/* Layout Utilities */
+.heading-premium {
+  font-family: 'Outfit', sans-serif;
+  background: linear-gradient(to right, #ffffff, #a78bfa);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.badge-source {
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.badge-source.careers { background: rgba(16, 185, 129, 0.15); color: rgb(52, 211, 153); }
+.badge-source.product { background: rgba(59, 130, 246, 0.15); color: rgb(96, 165, 250); }
+.badge-source.blog { background: rgba(245, 158, 11, 0.15); color: rgb(251, 191, 36); }
+.badge-source.about { background: rgba(139, 92, 246, 0.15); color: rgb(167, 139, 250); }
+.badge-source.general { background: rgba(107, 114, 128, 0.15); color: rgb(156, 163, 175); }
+.badge-source.locations { background: rgba(236, 72, 153, 0.15); color: rgb(244, 114, 182); }
+
+/* Ingestion Logs Console */
+.console-box {
+  background: #060913;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 12px;
+  color: #10b981;
+  padding: 16px;
+  border-radius: 8px;
+  height: 200px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  line-height: 1.6;
+}

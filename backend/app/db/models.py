@@ -8,8 +8,8 @@ from backend.app.config import settings
 
 Base = declarative_base()
 
-# Resolve vector size dynamically based on default settings
-VECTOR_DIMENSION = 768 if settings.EMBEDDING_PROVIDER == "gemini" else 1536
+# Enforce pgvector dimension of 768
+VECTOR_DIMENSION = 768
 
 class Company(Base):
     __tablename__ = "companies"

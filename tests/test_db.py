@@ -133,6 +133,9 @@ async def run_db_tests():
             logger.error(f"Database test failed: {e}")
             await session.rollback()
             sys.exit(1)
+        finally:
+            from backend.app.db.session import engine
+            await engine.dispose()
 
 if __name__ == "__main__":
     asyncio.run(run_db_tests())

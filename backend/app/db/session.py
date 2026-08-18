@@ -25,14 +25,25 @@ if sslmode in ("require", "prefer", "allow") or "ssl" in query_params:
 # Reconstruct URL completely without query parameters
 async_db_url = urlunparse(parsed_url._replace(query=""))
 
-# Create async engine with pool configuration suitable for serverless platforms like Neon
-engine = create_async_engine(
-    async_db_url,
-    pool_pre_ping=True,
-    pool_size=5,
-    max_overflow=10,
-    connect_args=connect_args
-)
+import sys
+from sqlalchemy.pool import NullPool
+
+# Detect if running under pytest to use NullPool and avoid connection pool loop closure conflicts
+if "pytest" in sys.modules:
+    engine = create_async_engine(
+        async_db_url,
+        poolclass=NullPool,
+        connect_args=connect_args
+    )
+else:
+    # Create async engine with pool configuration suitable for serverless platforms like Neon
+    engine = create_async_engine(
+        async_db_url,
+        pool_pre_ping=True,
+        pool_size=5,
+        max_overflow=10,
+        connect_args=connect_args
+    )
 
 # Async session factory
 AsyncSessionLocal = async_sessionmaker(
