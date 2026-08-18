@@ -23,8 +23,8 @@ class Settings(BaseSettings):
     # Pipeline configurations
     EMBEDDING_PROVIDER: str = "bge"
     EMBEDDING_MODEL: str = "BAAI/bge-base-en-v1.5"
-    LLM_PROVIDER: str = "openai"
-    LLM_MODEL: str = "models/gemini-3.5-flash"
+    LLM_PROVIDER: str = "gemini"
+    LLM_MODEL: str = "models/gemini-3.6-flash"
     RERANKER_PROVIDER: str = "none"
 
     # Server configurations

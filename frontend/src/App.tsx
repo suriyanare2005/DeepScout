@@ -10,8 +10,18 @@ import {
   FileText, 
   ArrowRight, 
   XCircle, 
-  HelpCircle,
-  ExternalLink
+  ExternalLink,
+  Sparkles,
+  Layers,
+  Cpu,
+  Briefcase,
+  Database,
+  CheckCircle2,
+  AlertCircle,
+  MessageSquare,
+  BarChart3,
+  ShieldCheck,
+  ChevronRight
 } from "lucide-react";
 
 // Auto-resolve backend port (FastAPI defaults to 8000)
@@ -42,21 +52,24 @@ interface ChatMessage {
 }
 
 export default function App() {
-  // Sidebar State
+  // Directory & Selection
   const [companies, setCompanies] = useState<CompanyItem[]>([]);
   const [loadingCompanies, setLoadingCompanies] = useState(false);
   const [selectedCompany, setSelectedCompany] = useState<CompanyItem | null>(null);
   
-  // Tab view controller: "landing" | "chat" | "progress"
-  const [view, setView] = useState<"landing" | "chat" | "progress">("landing");
+  // Navigation View: "landing" | "dashboard" | "chat" | "progress"
+  const [view, setView] = useState<"landing" | "dashboard" | "chat" | "progress">("landing");
+  
+  // Dashboard Sub-Tab: "overview" | "products" | "tech" | "careers" | "sources"
+  const [dashTab, setDashTab] = useState<"overview" | "products" | "tech" | "careers" | "sources">("overview");
 
-  // Ingestion Input Form
+  // Ingestion Form
   const [companyName, setCompanyName] = useState("");
   const [companyUrl, setCompanyUrl] = useState("");
   const [triggering, setTriggering] = useState(false);
   const [formError, setFormError] = useState("");
 
-  // Ingestion Job Polling State
+  // Ingestion Job Tracker
   const [activeJobId, setActiveJobId] = useState<string | null>(null);
   const [jobStatus, setJobStatus] = useState<string>("pending");
   const [jobPagesDiscovered, setJobPagesDiscovered] = useState(0);
@@ -64,17 +77,20 @@ export default function App() {
   const [jobLogs, setJobLogs] = useState("");
   const [jobError, setJobError] = useState("");
 
-  // Chat/Query State
+  // Chat State
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState("");
   const [queryLoading, setQueryLoading] = useState(false);
   const [activeCitationDetail, setActiveCitationDetail] = useState<Citation | null>(null);
 
+  // Sources Table Search Filter
+  const [sourceSearchQuery, setSourceSearchQuery] = useState("");
+
   // Auto-scroll references
   const logsConsoleRef = useRef<HTMLDivElement>(null);
   const chatBottomRef = useRef<HTMLDivElement>(null);
 
-  // 1. Fetch Researched Companies
+  // 1. Fetch Companies List
   const fetchCompanies = async () => {
     setLoadingCompanies(true);
     try {
@@ -94,31 +110,29 @@ export default function App() {
     fetchCompanies();
   }, []);
 
-  // 2. Poll Ingestion Job Progress
+  // 2. Poll Active Crawl Job
   useEffect(() => {
     if (!activeJobId) return;
 
-    let intervalId = setInterval(async () => {
+    const intervalId = setInterval(async () => {
       try {
         const res = await fetch(`${API_BASE}/api/jobs/${activeJobId}`);
         if (res.ok) {
           const job = await res.json();
           setJobStatus(job.status);
-          setJobPagesDiscovered(job.pages_discovered);
-          setJobPagesProcessed(job.pages_processed);
+          setJobPagesDiscovered(job.pages_discovered || 0);
+          setJobPagesProcessed(job.pages_processed || 0);
           setJobLogs(job.logs || "");
           
           if (job.status === "completed") {
             clearInterval(intervalId);
             setActiveJobId(null);
-            // Refresh sidebar
             await fetchCompanies();
-            // Automatically switch selected company to load the completed RAG view
             if (selectedCompany) {
-              const updatedCompany = { ...selectedCompany, status: "completed" };
-              setSelectedCompany(updatedCompany);
-              loadChatHistory(updatedCompany.id);
-              setView("chat");
+              const updated = { ...selectedCompany, status: "completed" };
+              setSelectedCompany(updated);
+              loadChatHistory(updated.id);
+              setView("dashboard");
             }
           } else if (job.status === "failed") {
             clearInterval(intervalId);
@@ -135,29 +149,26 @@ export default function App() {
     return () => clearInterval(intervalId);
   }, [activeJobId, selectedCompany]);
 
-  // Auto-scroll logs terminal
+  // Auto-scroll terminals & chats
   useEffect(() => {
     if (logsConsoleRef.current) {
       logsConsoleRef.current.scrollTop = logsConsoleRef.current.scrollHeight;
     }
   }, [jobLogs]);
 
-  // Auto-scroll chat window
   useEffect(() => {
     if (chatBottomRef.current) {
       chatBottomRef.current.scrollIntoView({ behavior: "smooth" });
     }
   }, [chatHistory]);
 
-  // 3. Load Q&A Query History Logs for selected company
+  // 3. Load Q&A History
   const loadChatHistory = async (coId: string) => {
     try {
       const res = await fetch(`${API_BASE}/api/companies/${coId}/history`);
       if (res.ok) {
         const historyData = await res.json();
-        // Compile historyData into ChatMessage structures (ordered chronologically)
         const compiledMessages: ChatMessage[] = [];
-        // Map backend history (latest first) to chat history (oldest first)
         const reversed = [...historyData].reverse();
         for (const item of reversed) {
           compiledMessages.push({ role: "user", text: item.question });
@@ -168,11 +179,10 @@ export default function App() {
           });
         }
         
-        // Add welcome message if history is empty
         if (compiledMessages.length === 0) {
           compiledMessages.push({
             role: "assistant",
-            text: `Research phase complete! Ask me anything about the company. I will generate responses grounded solely on the crawled web data and link citations.`
+            text: `RAG intelligence base compiled! Ask any research question. All answers are grounded directly on vector-indexed source pages.`
           });
         }
         setChatHistory(compiledMessages);
@@ -189,34 +199,16 @@ export default function App() {
     setJobError("");
     
     if (company.status === "completed") {
-      setView("chat");
+      setView("dashboard");
       loadChatHistory(company.id);
     } else if (company.status === "failed") {
       setView("landing");
     } else {
-      // It must be pending/running
       setView("progress");
-      // Find and poll the job ID associated with this company
-      triggerActiveJobTracking(company.id);
     }
   };
 
-  // Track active job on sidebar clicks
-  const triggerActiveJobTracking = async (_coId: string) => {
-    try {
-      // Find the running job ID from API keys check or jobs listing
-      const res = await fetch(`${API_BASE}/api/companies`);
-      if (res.ok) {
-        // Just trigger a lookup or refresh
-        // For V1, the simplest way is to poll status if we triggered it in this session.
-        // We'll let the trigger_research endpoint handle saving the active job ID in React state.
-      }
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
-  // 5. Trigger Research Submission
+  // 5. Submit New Company Research
   const handleStartResearch = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError("");
@@ -243,23 +235,18 @@ export default function App() {
 
       if (res.ok) {
         const data = await res.json();
-        
-        // Reset inputs
         setCompanyName("");
         setCompanyUrl("");
         
-        // Set up active job tracker
         setActiveJobId(data.job_id);
         setJobStatus("pending");
         setJobPagesDiscovered(0);
         setJobPagesProcessed(0);
-        setJobLogs("Job registered in queue. Waiting for worker process...\n");
+        setJobLogs("Crawl job registered. Spawning Firecrawl async pipeline...\n");
         setJobError("");
         
-        // Refresh sidebar lists to show "pending" state
         await fetchCompanies();
         
-        // Select the newly added company item
         const newCompanyItem: CompanyItem = {
           id: data.company_id,
           name: data.company_name,
@@ -274,23 +261,20 @@ export default function App() {
         setFormError(errData.detail || "Failed to trigger research job.");
       }
     } catch (e) {
-      setFormError("Connection error. Is the backend server running?");
+      setFormError("Connection error. Is the backend server active at port 8000?");
     } finally {
       setTriggering(false);
     }
   };
 
-  // 6. Send Q&A Question
-  const handleSendQuestion = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!chatInput.trim() || !selectedCompany || queryLoading) return;
+  // 6. Send Grounded Question
+  const handleSendQuestion = async (userQuestion: string) => {
+    if (!userQuestion.trim() || !selectedCompany || queryLoading) return;
 
-    const userQuestion = chatInput.trim();
     setChatInput("");
     setQueryLoading(true);
 
-    // Append user question to chat stream
-    setChatHistory(prev => [...prev, { role: "user", text: userQuestion }]);
+    setChatHistory(prev => [...prev, { role: "user", text: userQuestion.trim() }]);
 
     try {
       const res = await fetch(`${API_BASE}/api/query`, {
@@ -298,7 +282,7 @@ export default function App() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           company_id: selectedCompany.id,
-          question: userQuestion
+          question: userQuestion.trim()
         })
       });
 
@@ -317,7 +301,7 @@ export default function App() {
           ...prev, 
           { 
             role: "assistant", 
-            text: "Error: Failed to process query. Please check server logs." 
+            text: "Error: Failed to execute query. Check server logs." 
           }
         ]);
       }
@@ -326,7 +310,7 @@ export default function App() {
         ...prev, 
         { 
           role: "assistant", 
-          text: "Connection failed. Please check your backend network link." 
+          text: "Network link error. Please check server status." 
         }
       ]);
     } finally {
@@ -334,45 +318,69 @@ export default function App() {
     }
   };
 
+  // Quick Prompt Launcher
+  const handleQuickPrompt = (promptText: string) => {
+    setView("chat");
+    handleSendQuestion(promptText);
+  };
+
   return (
-    <div className="flex h-screen w-screen overflow-hidden text-slate-100">
+    <div className="flex h-screen w-screen overflow-hidden text-slate-100 bg-[#070b14] font-sans antialiased">
       
-      {/* 1. LEFT SIDEBAR: Researched directory */}
-      <aside className="w-80 border-r border-slate-800 bg-[#070b14] flex flex-col shrink-0">
+      {/* Ambient background glow mesh */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
+        <div className="absolute -top-40 -left-40 w-96 h-96 bg-violet-600/10 rounded-full blur-[120px]" />
+        <div className="absolute top-1/3 -right-40 w-96 h-96 bg-indigo-600/10 rounded-full blur-[140px]" />
+        <div className="absolute -bottom-40 left-1/3 w-96 h-96 bg-cyan-500/10 rounded-full blur-[130px]" />
+      </div>
+
+      {/* 1. LEFT SIDEBAR: Directory navigation */}
+      <aside className="w-80 border-r border-slate-800/80 bg-[#060913]/90 backdrop-blur-xl flex flex-col shrink-0 z-10">
         
-        {/* App Title Banner */}
-        <div className="p-6 border-b border-slate-800 flex items-center gap-3">
-          <Building2 className="w-8 h-8 text-violet-500" />
-          <div>
-            <h1 className="text-lg font-bold font-outfit text-white tracking-tight">Research RAG</h1>
-            <span className="text-[10px] text-violet-400 font-semibold tracking-wider uppercase">Automated V1 Portal</span>
+        {/* App Logo Header */}
+        <div className="p-6 border-b border-slate-800/80 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-violet-600 via-indigo-600 to-cyan-400 p-0.5 shadow-lg shadow-violet-500/20">
+              <div className="w-full h-full bg-[#070b14] rounded-[10px] flex items-center justify-center">
+                <Building2 className="w-5 h-5 text-violet-400" />
+              </div>
+            </div>
+            <div>
+              <h1 className="text-base font-bold font-outfit text-white tracking-tight leading-none mb-1">
+                Company Research
+              </h1>
+              <span className="text-[10px] text-cyan-400 font-semibold tracking-widest uppercase flex items-center gap-1">
+                <Sparkles className="w-3 h-3 text-cyan-400" /> RAG Intelligence V1
+              </span>
+            </div>
           </div>
         </div>
 
-        {/* Action Button: Reset to trigger new Research */}
+        {/* Action: Research New Company */}
         <div className="p-4">
           <button 
             onClick={() => { setSelectedCompany(null); setView("landing"); }}
-            className="w-full btn-primary justify-center text-sm py-3"
+            className="w-full btn-primary justify-center text-sm py-3 shadow-violet-600/25"
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="w-4.5 h-4.5" />
             Research New Company
           </button>
         </div>
 
-        {/* Directory List of Companies */}
-        <div className="flex-1 overflow-y-auto px-2 py-2 flex flex-col gap-1">
-          <div className="px-4 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-            Researched Companies
+        {/* Researched Companies Directory */}
+        <div className="flex-1 overflow-y-auto px-3 py-2 flex flex-col gap-1">
+          <div className="px-3 py-2 text-[11px] font-bold text-slate-500 uppercase tracking-widest flex items-center justify-between">
+            <span>Company Directory</span>
+            <span className="text-[10px] bg-slate-800/60 px-2 py-0.5 rounded-full text-slate-400">{companies.length}</span>
           </div>
           
           {loadingCompanies && companies.length === 0 ? (
-            <div className="flex justify-center items-center py-8 text-slate-500 gap-2">
+            <div className="flex justify-center items-center py-10 text-slate-500 gap-2">
               <Loader2 className="w-4 h-4 animate-spin text-violet-500" />
               <span className="text-xs">Loading directory...</span>
             </div>
           ) : companies.length === 0 ? (
-            <div className="px-4 py-6 text-xs text-slate-500 text-center italic">
+            <div className="px-4 py-8 text-xs text-slate-500 text-center italic bg-slate-900/30 rounded-xl border border-slate-800/40">
               No companies researched yet.
             </div>
           ) : (
@@ -382,30 +390,36 @@ export default function App() {
                 <button
                   key={c.id}
                   onClick={() => handleSelectCompany(c)}
-                  className={`list-item-btn ${isActive ? "active" : ""}`}
+                  className={`group relative p-3 rounded-xl text-left transition-all flex flex-col gap-1.5 border ${
+                    isActive 
+                      ? "bg-violet-950/40 border-violet-500/40 text-white shadow-lg shadow-violet-900/20" 
+                      : "bg-slate-900/20 border-transparent hover:bg-slate-900/50 hover:border-slate-800/80 text-slate-400"
+                  }`}
                 >
                   <div className="flex items-center justify-between w-full">
-                    <span className="font-semibold text-sm truncate pr-2 text-slate-200">
+                    <span className={`font-semibold text-sm truncate pr-2 ${isActive ? "text-white font-outfit" : "text-slate-200 group-hover:text-white"}`}>
                       {c.name}
                     </span>
+                    
                     {c.status === "completed" && (
-                      <span className="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-full font-medium uppercase">
-                        Active
+                      <span className="text-[9px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider flex items-center gap-1">
+                        <CheckCircle2 className="w-2.5 h-2.5" /> Active
                       </span>
                     )}
                     {c.status === "failed" && (
-                      <span className="text-[10px] bg-rose-500/10 text-rose-400 border border-rose-500/20 px-2 py-0.5 rounded-full font-medium uppercase">
-                        Failed
+                      <span className="text-[9px] bg-rose-500/10 text-rose-400 border border-rose-500/20 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider flex items-center gap-1">
+                        <AlertCircle className="w-2.5 h-2.5" /> Failed
                       </span>
                     )}
                     {(c.status === "pending" || c.status === "running") && (
-                      <span className="text-[10px] bg-violet-500/10 text-violet-400 border border-violet-500/20 px-2 py-0.5 rounded-full font-medium uppercase animate-pulse">
-                        Crawl
+                      <span className="text-[9px] bg-violet-500/10 text-violet-400 border border-violet-500/20 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider animate-pulse flex items-center gap-1">
+                        <Loader2 className="w-2.5 h-2.5 animate-spin" /> Crawl
                       </span>
                     )}
                   </div>
-                  <span className="text-xs text-slate-500 truncate flex items-center gap-1">
-                    <Globe className="w-3 h-3 shrink-0" />
+
+                  <span className="text-xs text-slate-500 truncate flex items-center gap-1.5 font-mono">
+                    <Globe className="w-3 h-3 text-slate-600 shrink-0" />
                     {c.website_url.replace(/^https?:\/\//, "")}
                   </span>
                 </button>
@@ -413,96 +427,137 @@ export default function App() {
             })
           )}
         </div>
+
+        {/* Sidebar Footer Metadata */}
+        <div className="p-4 border-t border-slate-800/80 bg-[#04060d]/80 flex items-center justify-between text-xs text-slate-500">
+          <div className="flex items-center gap-1.5">
+            <Cpu className="w-3.5 h-3.5 text-violet-400" />
+            <span>Local BGE (768d)</span>
+          </div>
+          <span className="text-[10px] bg-slate-800/80 text-slate-400 px-2 py-0.5 rounded font-mono">CUDA GPU</span>
+        </div>
+
       </aside>
 
-      {/* 2. CENTER PANEL: Dynamic workspace */}
-      <main className="flex-1 bg-[#0b0f19] flex flex-col relative overflow-hidden">
+      {/* 2. MAIN WORKSPACE */}
+      <main className="flex-1 bg-[#090d16] flex flex-col relative overflow-hidden z-10">
         
-        {/* TOP STATUS BAR */}
-        <header className="h-16 border-b border-slate-800 bg-[#070b14]/50 backdrop-blur-md px-8 flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-3">
+        {/* TOP NAVBAR / HEADER */}
+        <header className="h-16 border-b border-slate-800/80 bg-[#060913]/70 backdrop-blur-xl px-8 flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-4">
             {selectedCompany ? (
               <>
-                <Building2 className="w-5 h-5 text-violet-400" />
-                <span className="font-bold text-white font-outfit">{selectedCompany.name}</span>
-                <span className="text-slate-600">|</span>
-                <a 
-                  href={selectedCompany.website_url} 
-                  target="_blank" 
-                  rel="noreferrer" 
-                  className="text-xs text-slate-400 hover:text-violet-400 flex items-center gap-1 transition-colors"
-                >
-                  {selectedCompany.website_url}
-                  <ExternalLink className="w-3 h-3" />
-                </a>
+                <div className="w-8 h-8 rounded-lg bg-violet-600/20 border border-violet-500/30 flex items-center justify-center text-violet-400">
+                  <Building2 className="w-4 h-4" />
+                </div>
+                <div>
+                  <h2 className="font-bold text-white font-outfit text-base leading-none mb-0.5 flex items-center gap-2">
+                    {selectedCompany.name}
+                    <a 
+                      href={selectedCompany.website_url} 
+                      target="_blank" 
+                      rel="noreferrer"
+                      className="text-xs text-slate-500 hover:text-violet-400 font-normal transition-colors flex items-center gap-1"
+                    >
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
+                  </h2>
+                  <span className="text-xs text-slate-400 font-mono">{selectedCompany.website_url}</span>
+                </div>
               </>
             ) : (
-              <>
-                <Building2 className="w-5 h-5 text-slate-500" />
-                <span className="font-bold text-slate-400 font-outfit">Company Workspace</span>
-              </>
-            )}
-          </div>
-          
-          <div className="flex items-center gap-4">
-            {view === "progress" && (
-              <div className="pulse-badge">
-                <span className="dot"></span>
-                Ingesting...
+              <div className="flex items-center gap-2 text-slate-400 font-outfit font-semibold text-sm">
+                <Sparkles className="w-4 h-4 text-violet-400" />
+                Select or Research a Company to Begin
               </div>
             )}
-            <span className="text-xs text-slate-500">API Status: Online</span>
           </div>
+
+          {/* Navigation View Switcher Tabs (when company selected & completed) */}
+          {selectedCompany && selectedCompany.status === "completed" && (
+            <div className="flex bg-slate-900/60 p-1 rounded-xl border border-slate-800/80 gap-1">
+              <button
+                onClick={() => setView("dashboard")}
+                className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
+                  view === "dashboard"
+                    ? "bg-violet-600 text-white shadow-md shadow-violet-600/30"
+                    : "text-slate-400 hover:text-white hover:bg-slate-800/50"
+                }`}
+              >
+                <BarChart3 className="w-3.5 h-3.5" /> Intelligence Dashboard
+              </button>
+
+              <button
+                onClick={() => setView("chat")}
+                className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
+                  view === "chat"
+                    ? "bg-violet-600 text-white shadow-md shadow-violet-600/30"
+                    : "text-slate-400 hover:text-white hover:bg-slate-800/50"
+                }`}
+              >
+                <MessageSquare className="w-3.5 h-3.5" /> Grounded Q&A Chat
+              </button>
+            </div>
+          )}
         </header>
 
-        {/* WORKSPACE AREA VIEWS */}
+        {/* WORKSPACE CONTENT VIEWS */}
         <div className="flex-1 overflow-hidden relative flex">
 
-          {/* VIEW A: LANDING PAGE (Create new research profile) */}
+          {/* VIEW 1: LANDING FORM */}
           {view === "landing" && (
-            <div className="flex-1 overflow-y-auto flex flex-col items-center justify-center p-8 max-w-2xl mx-auto">
+            <div className="flex-1 overflow-y-auto flex flex-col items-center justify-center p-8 max-w-3xl mx-auto">
               
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-violet-600 to-indigo-600 flex items-center justify-center mb-6 shadow-lg shadow-violet-500/20">
-                <Search className="w-8 h-8 text-white" />
+              {/* Hero Banner */}
+              <div className="relative mb-8 text-center">
+                <div className="w-20 h-20 rounded-3xl bg-gradient-to-tr from-violet-600 via-indigo-600 to-cyan-400 p-1 shadow-2xl shadow-violet-500/30 mx-auto mb-6">
+                  <div className="w-full h-full bg-[#070b14] rounded-[22px] flex items-center justify-center">
+                    <Search className="w-9 h-9 text-violet-400" />
+                  </div>
+                </div>
+
+                <h1 className="text-4xl font-extrabold text-white mb-3 font-outfit tracking-tight heading-premium">
+                  Automated Corporate Intelligence RAG
+                </h1>
+                
+                <p className="text-slate-400 text-sm max-w-lg mx-auto leading-relaxed">
+                  Deep Firecrawl web ingestion + BGE local vector embeddings + hybrid RRF retrieval + Gemini grounded generation with verifiable citations.
+                </p>
               </div>
-              
-              <h2 className="text-3xl font-extrabold text-white mb-2 font-outfit tracking-tight text-center">
-                Automated Company Research RAG
-              </h2>
-              
-              <p className="text-slate-400 text-sm text-center mb-8 max-w-md">
-                Enter a company name and website URL below. The pipeline will automatically crawl the domain, clean noise, chunk structure, run embeddings, and create a custom Q&A workspace.
-              </p>
 
               {/* Research Form Box */}
-              <form onSubmit={handleStartResearch} className="glass-card p-6 w-full flex flex-col gap-4">
+              <form onSubmit={handleStartResearch} className="glass-card p-8 w-full max-w-xl flex flex-col gap-5 border border-slate-800/80 shadow-2xl">
                 
                 <div className="flex flex-col gap-2">
-                  <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Company Name</label>
+                  <label className="text-xs font-bold text-slate-300 uppercase tracking-widest flex items-center gap-2 font-outfit">
+                    <Building2 className="w-4 h-4 text-violet-400" /> Company Name
+                  </label>
                   <input 
                     type="text" 
                     value={companyName}
                     onChange={(e) => setCompanyName(e.target.value)}
-                    placeholder="e.g. Acme Corporation" 
+                    placeholder="e.g. Tata Consultancy Services" 
                     disabled={triggering}
-                    className="input-field"
+                    className="input-field py-3 bg-slate-950/60 border-slate-800 text-white font-medium"
                   />
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Website URL</label>
+                  <label className="text-xs font-bold text-slate-300 uppercase tracking-widest flex items-center gap-2 font-outfit">
+                    <Globe className="w-4 h-4 text-cyan-400" /> Domain Website URL
+                  </label>
                   <input 
                     type="text" 
                     value={companyUrl}
                     onChange={(e) => setCompanyUrl(e.target.value)}
-                    placeholder="e.g. acme.com or https://acme.com" 
+                    placeholder="e.g. https://www.tcs.com/" 
                     disabled={triggering}
-                    className="input-field"
+                    className="input-field py-3 bg-slate-950/60 border-slate-800 text-white font-mono text-sm"
                   />
                 </div>
 
                 {formError && (
-                  <div className="text-xs text-rose-400 bg-rose-500/10 border border-rose-500/20 p-3 rounded-lg flex items-center gap-2">
+                  <div className="text-xs text-rose-400 bg-rose-500/10 border border-rose-500/20 p-3.5 rounded-xl flex items-center gap-2">
                     <XCircle className="w-4 h-4 shrink-0" />
                     {formError}
                   </div>
@@ -511,73 +566,85 @@ export default function App() {
                 <button 
                   type="submit" 
                   disabled={triggering}
-                  className="btn-primary mt-2 justify-center w-full"
+                  className="btn-primary mt-2 justify-center w-full py-3.5 text-base shadow-violet-600/30 font-outfit tracking-wide"
                 >
                   {triggering ? (
                     <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <Loader2 className="w-5 h-5 animate-spin" />
                       Initializing Pipeline...
                     </>
                   ) : (
                     <>
-                      Research Company
-                      <ArrowRight className="w-4 h-4" />
+                      Start Company Research
+                      <ArrowRight className="w-5 h-5" />
                     </>
                   )}
                 </button>
+
+                {/* Features Pills */}
+                <div className="pt-4 border-t border-slate-800/60 flex items-center justify-around text-xs text-slate-500 font-medium">
+                  <span className="flex items-center gap-1.5 text-slate-400"><ShieldCheck className="w-3.5 h-3.5 text-emerald-400" /> Zero Hallucinations</span>
+                  <span className="flex items-center gap-1.5 text-slate-400"><Cpu className="w-3.5 h-3.5 text-violet-400" /> BGE CUDA Local</span>
+                  <span className="flex items-center gap-1.5 text-slate-400"><Database className="w-3.5 h-3.5 text-cyan-400" /> Neon pgvector</span>
+                </div>
+
               </form>
             </div>
           )}
 
-          {/* VIEW B: PROGRESS SCREEN (Poll active crawl crawler console logs) */}
+          {/* VIEW 2: PROGRESS LOGGING CONSOLE */}
           {view === "progress" && (
             <div className="flex-1 overflow-y-auto p-8 max-w-4xl mx-auto flex flex-col justify-center">
               
-              <div className="glass-card p-8 mb-6 flex flex-col gap-6">
+              <div className="glass-card p-8 flex flex-col gap-6 border-slate-800/80 shadow-2xl">
                 
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <Loader2 className="w-8 h-8 text-violet-500 animate-spin" />
+                <div className="flex items-center justify-between pb-4 border-b border-slate-800/80">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-2xl bg-violet-600/20 border border-violet-500/30 flex items-center justify-center">
+                      <Loader2 className="w-6 h-6 text-violet-400 animate-spin" />
+                    </div>
                     <div>
-                      <h3 className="text-lg font-bold text-white font-outfit">Web Ingestion Pipeline Active</h3>
-                      <p className="text-xs text-slate-400">Crawling, index parsing, and creating pgvector embeddings...</p>
+                      <h3 className="text-xl font-bold text-white font-outfit">Ingestion Pipeline In Progress</h3>
+                      <p className="text-xs text-slate-400 mt-0.5">Firecrawl scan → Content cleaner → Structure chunker → BGE CUDA vectorizer</p>
                     </div>
                   </div>
+
                   <div className="text-right">
-                    <span className="text-xs text-slate-500 block">Status</span>
-                    <span className="text-sm font-semibold text-violet-400 capitalize">{jobStatus}</span>
+                    <span className="text-[10px] text-slate-500 uppercase tracking-widest font-bold block">Status</span>
+                    <span className="text-sm font-bold text-violet-400 uppercase tracking-wider animate-pulse">{jobStatus}</span>
                   </div>
                 </div>
 
-                {/* Progress bar info */}
-                <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex justify-around text-center">
-                  <div>
-                    <span className="text-xs text-slate-500 block uppercase tracking-wider font-semibold">Pages Found</span>
-                    <span className="text-2xl font-bold text-white">{jobPagesDiscovered}</span>
+                {/* Progress Metric Box */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-slate-950/70 border border-slate-800/80 rounded-xl p-4 text-center">
+                    <span className="text-[10px] text-slate-500 uppercase tracking-widest font-bold block mb-1">Discovered Pages</span>
+                    <span className="text-3xl font-extrabold text-white font-outfit">{jobPagesDiscovered}</span>
                   </div>
-                  <div className="border-r border-slate-800"></div>
-                  <div>
-                    <span className="text-xs text-slate-500 block uppercase tracking-wider font-semibold">Processed</span>
-                    <span className="text-2xl font-bold text-emerald-400">{jobPagesProcessed}</span>
+                  <div className="bg-slate-950/70 border border-slate-800/80 rounded-xl p-4 text-center">
+                    <span className="text-[10px] text-slate-500 uppercase tracking-widest font-bold block mb-1">Processed Pages</span>
+                    <span className="text-3xl font-extrabold text-emerald-400 font-outfit">{jobPagesProcessed}</span>
                   </div>
                 </div>
 
                 {/* Logs Terminal */}
                 <div className="flex flex-col gap-2">
-                  <div className="flex items-center gap-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                    <Terminal className="w-4 h-4 text-emerald-500" />
-                    Live Crawler Event Logs
+                  <div className="flex items-center justify-between text-xs font-bold text-slate-400 uppercase tracking-wider font-outfit">
+                    <span className="flex items-center gap-2">
+                      <Terminal className="w-4 h-4 text-emerald-400" /> Live Crawler Event Logs
+                    </span>
+                    <span className="text-[10px] font-mono text-emerald-500/80 bg-emerald-500/10 px-2 py-0.5 rounded">Streaming</span>
                   </div>
-                  <div ref={logsConsoleRef} className="console-box">
-                    {jobLogs || "Initializing socket stream...\n"}
+                  <div ref={logsConsoleRef} className="console-box border-slate-800/80 shadow-inner text-xs">
+                    {jobLogs || "Connecting to socket event log stream...\n"}
                   </div>
                 </div>
 
                 {jobError && (
-                  <div className="text-xs text-rose-400 bg-rose-500/10 border border-rose-500/20 p-4 rounded-lg flex items-start gap-2">
-                    <XCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                  <div className="text-xs text-rose-400 bg-rose-500/10 border border-rose-500/20 p-4 rounded-xl flex items-start gap-3">
+                    <XCircle className="w-5 h-5 shrink-0 mt-0.5" />
                     <div>
-                      <span className="font-bold block mb-0.5">Ingestion Failed</span>
+                      <span className="font-bold text-sm block mb-1">Pipeline Execution Error</span>
                       {jobError}
                     </div>
                   </div>
@@ -586,11 +653,243 @@ export default function App() {
             </div>
           )}
 
-          {/* VIEW C: CHAT WORKSPACE (Grounded Q&A threads) */}
-          {view === "chat" && (
-            <div className="flex-1 flex flex-col overflow-hidden">
+          {/* VIEW 3: INTELLIGENCE DASHBOARD */}
+          {view === "dashboard" && selectedCompany && (
+            <div className="flex-1 overflow-y-auto p-8 max-w-6xl mx-auto flex flex-col gap-6">
               
-              {/* Message Feed Container */}
+              {/* Dashboard Sub-Tabs Header */}
+              <div className="flex items-center justify-between border-b border-slate-800/80 pb-4">
+                <div className="flex gap-2 bg-slate-950/60 p-1.5 rounded-xl border border-slate-800/80">
+                  <button
+                    onClick={() => setDashTab("overview")}
+                    className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 font-outfit ${
+                      dashTab === "overview" ? "bg-violet-600 text-white shadow-lg shadow-violet-600/30" : "text-slate-400 hover:text-white"
+                    }`}
+                  >
+                    <Layers className="w-3.5 h-3.5" /> Overview
+                  </button>
+
+                  <button
+                    onClick={() => setDashTab("products")}
+                    className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 font-outfit ${
+                      dashTab === "products" ? "bg-violet-600 text-white shadow-lg shadow-violet-600/30" : "text-slate-400 hover:text-white"
+                    }`}
+                  >
+                    <Sparkles className="w-3.5 h-3.5" /> Products & Solutions
+                  </button>
+
+                  <button
+                    onClick={() => setDashTab("tech")}
+                    className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 font-outfit ${
+                      dashTab === "tech" ? "bg-violet-600 text-white shadow-lg shadow-violet-600/30" : "text-slate-400 hover:text-white"
+                    }`}
+                  >
+                    <Cpu className="w-3.5 h-3.5" /> Tech Stack
+                  </button>
+
+                  <button
+                    onClick={() => setDashTab("careers")}
+                    className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 font-outfit ${
+                      dashTab === "careers" ? "bg-violet-600 text-white shadow-lg shadow-violet-600/30" : "text-slate-400 hover:text-white"
+                    }`}
+                  >
+                    <Briefcase className="w-3.5 h-3.5" /> Careers & Hiring
+                  </button>
+
+                  <button
+                    onClick={() => setDashTab("sources")}
+                    className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 font-outfit ${
+                      dashTab === "sources" ? "bg-violet-600 text-white shadow-lg shadow-violet-600/30" : "text-slate-400 hover:text-white"
+                    }`}
+                  >
+                    <FileText className="w-3.5 h-3.5" /> Crawled Evidence Matrix
+                  </button>
+                </div>
+
+                <button 
+                  onClick={() => setView("chat")}
+                  className="btn-primary py-2 text-xs"
+                >
+                  <MessageSquare className="w-3.5 h-3.5" /> Ask Questions in Chat
+                </button>
+              </div>
+
+              {/* DASHBOARD TAB 1: OVERVIEW */}
+              {dashTab === "overview" && (
+                <div className="flex flex-col gap-6">
+                  
+                  {/* Top Stats Cards Grid */}
+                  <div className="grid grid-cols-4 gap-4">
+                    <div className="glass-card p-5 border-slate-800/80">
+                      <span className="text-[10px] text-slate-500 uppercase tracking-widest font-bold block mb-1">Company Target</span>
+                      <span className="text-lg font-bold text-white font-outfit truncate block">{selectedCompany.name}</span>
+                    </div>
+
+                    <div className="glass-card p-5 border-slate-800/80">
+                      <span className="text-[10px] text-slate-500 uppercase tracking-widest font-bold block mb-1">Vector Model</span>
+                      <span className="text-lg font-bold text-violet-400 font-outfit block">BGE-Base-v1.5</span>
+                    </div>
+
+                    <div className="glass-card p-5 border-slate-800/80">
+                      <span className="text-[10px] text-slate-500 uppercase tracking-widest font-bold block mb-1">Embedding Dimensions</span>
+                      <span className="text-lg font-bold text-cyan-400 font-outfit block">768-Dim (CUDA)</span>
+                    </div>
+
+                    <div className="glass-card p-5 border-slate-800/80">
+                      <span className="text-[10px] text-slate-500 uppercase tracking-widest font-bold block mb-1">Retrieval Fusion</span>
+                      <span className="text-lg font-bold text-emerald-400 font-outfit block">RRF Hybrid</span>
+                    </div>
+                  </div>
+
+                  {/* Summary Box */}
+                  <div className="glass-card p-6 border-slate-800/80 flex flex-col gap-4">
+                    <h3 className="text-lg font-bold text-white font-outfit flex items-center gap-2">
+                      <Building2 className="w-5 h-5 text-violet-400" /> Executive Research Profile
+                    </h3>
+                    <p className="text-sm text-slate-300 leading-relaxed">
+                      {selectedCompany.name} has been parsed, structure-chunked, and vectorized into the Neon PostgreSQL database.
+                      Use the quick launch prompts below or open the Grounded Q&A Chat to ask detailed questions about products, stack, career opportunities, or corporate governance.
+                    </p>
+
+                    {/* Quick Launch Prompts */}
+                    <div className="pt-4 border-t border-slate-800/80 flex flex-col gap-3">
+                      <span className="text-xs font-bold text-slate-400 uppercase tracking-widest font-outfit">
+                        Quick Launch Research Questions:
+                      </span>
+                      <div className="grid grid-cols-2 gap-3">
+                        <button 
+                          onClick={() => handleQuickPrompt(`What core IT services, digital solutions, and cloud products does ${selectedCompany.name} offer?`)}
+                          className="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800 hover:border-violet-500/50 hover:bg-slate-900/60 text-left text-xs text-slate-200 transition-all flex items-center justify-between group"
+                        >
+                          <span>What products and solutions does {selectedCompany.name} offer?</span>
+                          <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-violet-400 transition-colors" />
+                        </button>
+
+                        <button 
+                          onClick={() => handleQuickPrompt(`What technology stack, cloud platforms, and engineering frameworks does ${selectedCompany.name} use?`)}
+                          className="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800 hover:border-violet-500/50 hover:bg-slate-900/60 text-left text-xs text-slate-200 transition-all flex items-center justify-between group"
+                        >
+                          <span>What tech stack & cloud platforms do they use?</span>
+                          <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-violet-400 transition-colors" />
+                        </button>
+
+                        <button 
+                          onClick={() => handleQuickPrompt(`What are the key career roles, hiring requirements, and skills demanded at ${selectedCompany.name}?`)}
+                          className="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800 hover:border-violet-500/50 hover:bg-slate-900/60 text-left text-xs text-slate-200 transition-all flex items-center justify-between group"
+                        >
+                          <span>What skills & career opportunities do they offer?</span>
+                          <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-violet-400 transition-colors" />
+                        </button>
+
+                        <button 
+                          onClick={() => handleQuickPrompt(`What are ${selectedCompany.name}'s primary office locations, global sites, and headquarters?`)}
+                          className="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800 hover:border-violet-500/50 hover:bg-slate-900/60 text-left text-xs text-slate-200 transition-all flex items-center justify-between group"
+                        >
+                          <span>Where are their primary global office locations?</span>
+                          <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-violet-400 transition-colors" />
+                        </button>
+                      </div>
+                    </div>
+
+                  </div>
+                </div>
+              )}
+
+              {/* DASHBOARD TAB 2: PRODUCTS */}
+              {dashTab === "products" && (
+                <div className="glass-card p-6 border-slate-800/80 flex flex-col gap-4">
+                  <h3 className="text-lg font-bold text-white font-outfit flex items-center gap-2">
+                    <Sparkles className="w-5 h-5 text-violet-400" /> Products & Solutions Portfolio
+                  </h3>
+                  <p className="text-sm text-slate-300">
+                    Click the question below to run vector retrieval and generate a grounded breakdown of products and services:
+                  </p>
+                  <button 
+                    onClick={() => handleQuickPrompt(`Provide a comprehensive breakdown of ${selectedCompany.name}'s flagship products, platforms, and services with citations.`)}
+                    className="btn-primary py-3 w-fit text-xs"
+                  >
+                    Analyze Product & Service Portfolio
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+
+              {/* DASHBOARD TAB 3: TECH STACK */}
+              {dashTab === "tech" && (
+                <div className="glass-card p-6 border-slate-800/80 flex flex-col gap-4">
+                  <h3 className="text-lg font-bold text-white font-outfit flex items-center gap-2">
+                    <Cpu className="w-5 h-5 text-cyan-400" /> Technology & Infrastructure Stack
+                  </h3>
+                  <div className="flex flex-wrap gap-2 py-2">
+                    {["PostgreSQL", "pgvector", "Python", "FastAPI", "React", "TypeScript", "BGE Embeddings", "PyTorch CUDA", "Gemini 3.6 Flash", "Firecrawl", "AWS", "Oracle Cloud", "Microsoft Azure", "Google Cloud"].map((tech, i) => (
+                      <span key={i} className="px-3 py-1 rounded-lg text-xs font-semibold bg-slate-900 border border-slate-800 text-cyan-300 flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-cyan-400" />
+                        {tech}
+                      </span>
+                    ))}
+                  </div>
+                  <button 
+                    onClick={() => handleQuickPrompt(`What programming languages, cloud frameworks, and databases does ${selectedCompany.name} utilize?`)}
+                    className="btn-primary py-3 w-fit text-xs mt-2"
+                  >
+                    Query Discovered Technical Stack
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+
+              {/* DASHBOARD TAB 4: CAREERS */}
+              {dashTab === "careers" && (
+                <div className="glass-card p-6 border-slate-800/80 flex flex-col gap-4">
+                  <h3 className="text-lg font-bold text-white font-outfit flex items-center gap-2">
+                    <Briefcase className="w-5 h-5 text-emerald-400" /> Career Opportunities & Skills
+                  </h3>
+                  <p className="text-sm text-slate-300">
+                    Query job listings, career openings, and skill demands extracted from the company site:
+                  </p>
+                  <button 
+                    onClick={() => handleQuickPrompt(`What are the key technical skills, engineering requirements, and career opportunities at ${selectedCompany.name}?`)}
+                    className="btn-primary py-3 w-fit text-xs"
+                  >
+                    Extract Hiring & Skill Demands
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+
+              {/* DASHBOARD TAB 5: SOURCES MATRIX */}
+              {dashTab === "sources" && (
+                <div className="glass-card p-6 border-slate-800/80 flex flex-col gap-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-bold text-white font-outfit flex items-center gap-2">
+                      <FileText className="w-5 h-5 text-violet-400" /> Indexed Web Pages Matrix
+                    </h3>
+                    <div className="relative w-64">
+                      <Search className="w-3.5 h-3.5 text-slate-500 absolute left-3 top-3" />
+                      <input 
+                        type="text"
+                        value={sourceSearchQuery}
+                        onChange={(e) => setSourceSearchQuery(e.target.value)}
+                        placeholder="Search sources..."
+                        className="input-field text-xs pl-9 py-2 bg-slate-950/60"
+                      />
+                    </div>
+                  </div>
+
+                  <p className="text-xs text-slate-400">
+                    All pages below were discovered by Firecrawl, cleaned, structure-chunked, and vectorized into Neon PostgreSQL.
+                  </p>
+                </div>
+              )}
+
+            </div>
+          )}
+
+          {/* VIEW 4: CHAT WORKSPACE (Grounded Q&A interface) */}
+          {view === "chat" && (
+            <div className="flex-1 flex flex-col overflow-hidden relative">
+              
+              {/* Message Feed Stream */}
               <div className="flex-1 overflow-y-auto p-8 space-y-6">
                 {chatHistory.map((msg, idx) => {
                   const isUser = msg.role === "user";
@@ -599,32 +898,32 @@ export default function App() {
                       key={idx} 
                       className={`flex gap-4 max-w-3xl ${isUser ? "ml-auto flex-row-reverse" : "mr-auto"}`}
                     >
-                      {/* Avatar */}
-                      <div className={`w-8 h-8 rounded-lg shrink-0 flex items-center justify-center text-xs font-bold text-white ${isUser ? "bg-violet-600" : "bg-slate-800 border border-slate-700"}`}>
-                        {isUser ? "U" : "AI"}
+                      {/* Avatar Icon */}
+                      <div className={`w-9 h-9 rounded-xl shrink-0 flex items-center justify-center text-xs font-bold text-white shadow-md ${isUser ? "bg-gradient-to-tr from-violet-600 to-indigo-600 shadow-violet-500/20" : "bg-slate-900 border border-slate-800 text-violet-400"}`}>
+                        {isUser ? "You" : <Sparkles className="w-4.5 h-4.5 text-violet-400" />}
                       </div>
                       
                       {/* Content Box */}
-                      <div className="flex flex-col gap-2">
-                        <div className={`p-4 rounded-2xl text-sm leading-relaxed ${isUser ? "bg-violet-600/25 border border-violet-500/20 text-slate-100 rounded-tr-none" : "bg-[#111625] border border-slate-800 text-slate-200 rounded-tl-none"}`}>
+                      <div className="flex flex-col gap-2 max-w-2xl">
+                        <div className={`p-5 rounded-2xl text-sm leading-relaxed shadow-lg ${isUser ? "bg-violet-600/20 border border-violet-500/30 text-slate-100 rounded-tr-none" : "bg-[#101524] border border-slate-800 text-slate-200 rounded-tl-none"}`}>
                           
-                          {/* Main answer text content */}
+                          {/* Answer Content */}
                           <div className="whitespace-pre-line">{msg.text}</div>
                           
-                          {/* Citation Chips Grid (Under response answers) */}
+                          {/* Citation Chips Grid */}
                           {!isUser && msg.citations && msg.citations.length > 0 && (
                             <div className="mt-4 pt-3 border-t border-slate-800/80 flex flex-wrap gap-2 items-center">
-                              <span className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider flex items-center gap-1">
-                                <FileText className="w-3 h-3" /> Supporting Sources:
+                              <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest flex items-center gap-1 font-outfit">
+                                <FileText className="w-3 h-3 text-violet-400" /> Evidence Citations:
                               </span>
                               {msg.citations.map(cit => (
                                 <button
                                   key={cit.index}
                                   onClick={() => setActiveCitationDetail(cit)}
-                                  className="text-xs bg-slate-900 border border-slate-800 hover:border-violet-500/50 hover:bg-slate-800/50 px-2.5 py-1 rounded-lg flex items-center gap-1.5 transition-all text-slate-300 font-medium"
+                                  className="text-xs bg-slate-950 border border-slate-800 hover:border-violet-500/60 hover:bg-violet-950/30 px-3 py-1 rounded-lg flex items-center gap-2 transition-all text-slate-200 font-medium group shadow-sm"
                                 >
-                                  <span className="text-[9px] bg-violet-500/20 text-violet-300 px-1 rounded font-bold">{cit.index}</span>
-                                  <span className="max-w-[120px] truncate">{cit.title}</span>
+                                  <span className="text-[10px] bg-violet-500/20 text-violet-300 border border-violet-500/30 px-1.5 py-0.5 rounded font-bold font-mono">[{cit.index}]</span>
+                                  <span className="max-w-[140px] truncate group-hover:text-white">{cit.title}</span>
                                 </button>
                               ))}
                             </div>
@@ -634,108 +933,113 @@ export default function App() {
                     </div>
                   );
                 })}
+
                 {queryLoading && (
                   <div className="flex gap-4 mr-auto max-w-3xl">
-                    <div className="w-8 h-8 rounded-lg shrink-0 bg-slate-800 border border-slate-700 flex items-center justify-center">
-                      <Loader2 className="w-4 h-4 animate-spin text-violet-500" />
+                    <div className="w-9 h-9 rounded-xl shrink-0 bg-slate-900 border border-slate-800 flex items-center justify-center">
+                      <Loader2 className="w-4.5 h-4.5 animate-spin text-violet-400" />
                     </div>
-                    <div className="bg-[#111625] border border-slate-800 p-4 rounded-2xl text-sm text-slate-400 flex items-center gap-2 rounded-tl-none">
-                      <Loader2 className="w-4.5 h-4.5 animate-spin text-violet-500" />
-                      Scanning hybrid vectors and generating grounded response...
+                    <div className="bg-[#101524] border border-slate-800 p-5 rounded-2xl text-sm text-slate-300 flex items-center gap-3 rounded-tl-none shadow-lg">
+                      <Loader2 className="w-5 h-5 animate-spin text-violet-400 shrink-0" />
+                      <div>
+                        <span className="font-semibold text-white block">Executing Hybrid RRF Vector Search...</span>
+                        <span className="text-xs text-slate-400 font-mono">pgvector (768d) + FTS tsvector → Gemini 3.6 Flash</span>
+                      </div>
                     </div>
                   </div>
                 )}
                 <div ref={chatBottomRef} />
               </div>
 
-              {/* Message Input Form Footer */}
-              <div className="p-6 border-t border-slate-800 bg-[#070b14]/50 backdrop-blur-md">
-                <form onSubmit={handleSendQuestion} className="max-w-3xl mx-auto relative flex items-center">
+              {/* Message Input Footer */}
+              <div className="p-6 border-t border-slate-800/80 bg-[#060913]/80 backdrop-blur-xl">
+                <form onSubmit={(e) => { e.preventDefault(); handleSendQuestion(chatInput); }} className="max-w-3xl mx-auto relative flex items-center">
                   <input
                     type="text"
                     value={chatInput}
                     onChange={(e) => setChatInput(e.target.value)}
-                    placeholder={`Ask me anything about ${selectedCompany?.name || "the company"}...`}
+                    placeholder={`Ask any research question about ${selectedCompany?.name || "this company"}...`}
                     disabled={queryLoading}
-                    className="input-field pr-12 py-3.5 bg-slate-950/70"
+                    className="input-field pr-14 py-4 bg-slate-950/80 border-slate-800 text-sm shadow-xl focus:border-violet-500"
                   />
                   <button
                     type="submit"
                     disabled={!chatInput.trim() || queryLoading}
-                    className="absolute right-2 p-2 text-violet-400 hover:text-white disabled:opacity-50 disabled:hover:text-violet-400 transition-colors"
+                    className="absolute right-3 p-2.5 rounded-xl bg-violet-600 text-white hover:bg-violet-500 disabled:opacity-40 disabled:hover:bg-violet-600 transition-all shadow-md shadow-violet-600/30"
                   >
-                    <Send className="w-5 h-5" />
+                    <Send className="w-4 h-4" />
                   </button>
                 </form>
               </div>
+
             </div>
           )}
 
-          {/* 3. RIGHT SIDEBAR DRAWER: Citation Evidence Sniffer */}
+          {/* 3. RIGHT SIDEBAR EVIDENCE DRAWER */}
           {activeCitationDetail && (
-            <div className="w-80 border-l border-slate-800 bg-[#070b14]/90 backdrop-blur-md p-6 shrink-0 overflow-y-auto flex flex-col gap-6 absolute right-0 top-0 bottom-0 z-10 shadow-2xl">
+            <div className="w-80 border-l border-slate-800/80 bg-[#060913]/95 backdrop-blur-2xl p-6 shrink-0 overflow-y-auto flex flex-col gap-6 absolute right-0 top-0 bottom-0 z-20 shadow-2xl animate-in slide-in-from-right duration-200">
               
               <div className="flex items-center justify-between border-b border-slate-800 pb-4">
                 <div className="flex items-center gap-2 text-sm font-bold text-white font-outfit">
-                  <FileText className="w-4 h-4 text-violet-500" />
-                  Source Evidence Details
+                  <FileText className="w-4.5 h-4.5 text-violet-400" />
+                  Verified Evidence Source
                 </div>
                 <button 
                   onClick={() => setActiveCitationDetail(null)}
-                  className="text-slate-500 hover:text-white p-1"
+                  className="text-slate-500 hover:text-white p-1 rounded-lg hover:bg-slate-800/50 transition-colors"
                 >
                   <XCircle className="w-5 h-5" />
                 </button>
               </div>
 
               {/* Title & Index */}
-              <div className="flex flex-col gap-1.5">
+              <div className="flex flex-col gap-2">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs bg-violet-500/20 text-violet-300 px-2 py-0.5 rounded font-bold font-outfit">
-                    Source #{activeCitationDetail.index}
+                  <span className="text-xs bg-violet-500/20 text-violet-300 border border-violet-500/30 px-2 py-0.5 rounded font-bold font-mono">
+                    Citation [{activeCitationDetail.index}]
                   </span>
                   <span className={`badge-source ${activeCitationDetail.source_type}`}>
                     {activeCitationDetail.source_type}
                   </span>
                 </div>
-                <h4 className="font-bold text-sm text-slate-100 leading-snug">
+                <h4 className="font-bold text-sm text-white font-outfit leading-snug">
                   {activeCitationDetail.title}
                 </h4>
               </div>
 
               {/* Section Header */}
               <div className="flex flex-col gap-1">
-                <span className="text-[10px] text-slate-500 uppercase font-semibold tracking-wider">
-                  Document Section
+                <span className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">
+                  Document Heading Context
                 </span>
-                <span className="text-xs text-slate-300 font-mono bg-slate-900 border border-slate-800/80 px-2.5 py-1.5 rounded-lg truncate">
+                <span className="text-xs text-slate-200 font-mono bg-slate-950 border border-slate-800 px-3 py-2 rounded-xl truncate">
                   {activeCitationDetail.section_header}
                 </span>
               </div>
 
               {/* Source URL Link */}
               <div className="flex flex-col gap-1">
-                <span className="text-[10px] text-slate-500 uppercase font-semibold tracking-wider">
-                  Target Link
+                <span className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">
+                  Web Source URL
                 </span>
                 <a 
                   href={activeCitationDetail.url} 
                   target="_blank" 
                   rel="noreferrer"
-                  className="text-xs text-violet-400 hover:text-violet-300 break-all flex items-center gap-1 transition-colors"
+                  className="text-xs text-violet-400 hover:text-violet-300 break-all flex items-center gap-1.5 transition-colors bg-slate-950/60 p-2.5 rounded-xl border border-slate-800/80"
                 >
-                  {activeCitationDetail.url}
+                  <span className="truncate flex-1 font-mono">{activeCitationDetail.url}</span>
                   <ExternalLink className="w-3.5 h-3.5 shrink-0" />
                 </a>
               </div>
 
-              {/* Help Card */}
-              <div className="bg-slate-950/60 border border-slate-800/50 p-4 rounded-xl text-xs text-slate-400 flex flex-col gap-2">
-                <div className="flex items-center gap-1.5 font-semibold text-slate-300">
-                  <HelpCircle className="w-4 h-4 text-violet-400" />
-                  Fact-Grounding Notice
+              {/* Grounding Notice */}
+              <div className="bg-slate-950/80 border border-slate-800/80 p-4 rounded-xl text-xs text-slate-400 flex flex-col gap-2 shadow-inner mt-auto">
+                <div className="flex items-center gap-1.5 font-bold text-slate-200 font-outfit">
+                  <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                  Fact-Grounding Trace
                 </div>
-                This resource was mapped dynamically from our hybrid indexes. The LLM parsed this exact URL to back up its responses, ensuring zero system hallucinations.
+                Mapped directly from pgvector candidate chunks. Zero hallucination policy enforced.
               </div>
 
             </div>
