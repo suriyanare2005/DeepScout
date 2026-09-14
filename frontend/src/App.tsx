@@ -1,39 +1,18 @@
-import { useState, useEffect, useRef } from "react";
-import { 
-  BrowserRouter, 
-  Routes, 
-  Route, 
-  Link, 
-  useNavigate, 
-  useLocation, 
-  useParams 
+import { useState, useEffect, useRef, useCallback } from "react";
+import {
+  BrowserRouter, Routes, Route, Link, useNavigate, useLocation, useParams
 } from "react-router-dom";
-import { 
-  Building2, 
-  Search, 
-  Send, 
-  Globe, 
-  Loader2, 
-  FileText, 
-  ArrowUpRight, 
-  XCircle, 
-  ExternalLink, 
-  ShieldCheck, 
-  Copy, 
-  Check, 
-  Menu, 
-  X, 
-  Sparkles, 
-  Compass, 
-  Layers, 
-  Zap, 
-  FileSearch
+import {
+  Building2, Search, Send, Globe, Loader2, FileText, ArrowUpRight,
+  XCircle, ExternalLink, ShieldCheck, Copy, Check, Menu, X,
+  Sparkles, Layers, ChevronRight, Clock, Database,
+  Cpu, BarChart3, BookOpen, Filter, Eye, Star, AlertTriangle, RefreshCw
 } from "lucide-react";
 
-// Auto-resolve backend port (FastAPI defaults to 8000)
-const API_BASE = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1" 
-  ? "http://localhost:8000" 
-  : window.location.origin;
+const API_BASE =
+  window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
+    ? "http://localhost:8000"
+    : window.location.origin;
 
 interface CompanyItem {
   id: string;
@@ -42,7 +21,6 @@ interface CompanyItem {
   status: string;
   created_at: string;
 }
-
 interface Citation {
   index: number;
   url: string;
@@ -53,21 +31,38 @@ interface Citation {
   relevance_score?: number;
   chunk_id?: string;
 }
-
 interface ChatMessage {
   role: "user" | "assistant";
   text: string;
   citations?: Citation[];
+  ts?: string;
+}
+interface JobStatus {
+  status: string;
+  pages_discovered?: number;
+  pages_processed?: number;
+  logs?: string;
+  error?: string;
 }
 
-// ----------------------------------------------------
-// 1. GLOBAL FLOATING NAVIGATION COMPONENT
-// ----------------------------------------------------
+function BrandMark({ size = 36 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 36 36" fill="none">
+      <circle cx="18" cy="18" r="17" fill="#F4C542" />
+      <circle cx="18" cy="18" r="12" stroke="#191817" strokeWidth="1.5" strokeDasharray="3 3" />
+      <circle cx="18" cy="18" r="5" fill="#191817" />
+      <line x1="18" y1="6" x2="18" y2="13" stroke="#191817" strokeWidth="1.5" strokeLinecap="round" />
+      <line x1="18" y1="23" x2="18" y2="30" stroke="#191817" strokeWidth="1.5" strokeLinecap="round" />
+      <line x1="6" y1="18" x2="13" y2="18" stroke="#191817" strokeWidth="1.5" strokeLinecap="round" />
+      <line x1="23" y1="18" x2="30" y2="18" stroke="#191817" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 function GlobalNavbar() {
   const location = useLocation();
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
-
   const navItems = [
     { label: "Home", path: "/" },
     { label: "Research", path: "/research" },
@@ -75,769 +70,799 @@ function GlobalNavbar() {
     { label: "Sources", path: "/sources" },
     { label: "History", path: "/history" },
   ];
-
-  const isActive = (path: string) => {
-    if (path === "/") return location.pathname === "/";
-    return location.pathname.startsWith(path);
-  };
-
+  const isActive = (p: string) => p === "/" ? location.pathname === "/" : location.pathname.startsWith(p);
   return (
-    <header className="sticky top-4 z-50 px-4 md:px-8 max-w-6xl mx-auto mb-6">
-      <div className="bg-white/80 backdrop-blur-2xl border border-white/90 rounded-full px-6 py-3 shadow-lg shadow-[#191817]/5 flex items-center justify-between">
-        
-        {/* DeepScout Brand Logo */}
-        <Link to="/" className="flex items-center gap-2.5 group">
-          <div className="w-9 h-9 rounded-full bg-[#F4C542] flex items-center justify-center text-[#191817] shadow-md shadow-[#F4C542]/30 group-hover:scale-105 transition-transform">
-            <Compass className="w-5 h-5 text-[#191817]" />
-          </div>
-          <span className="font-editorial text-xl font-bold tracking-tight text-[#191817]">
-            DeepScout
+    <header className="ds-navbar">
+      <div className="ds-navbar-inner">
+        <Link to="/" style={{ display:"flex", alignItems:"center", gap:10, textDecoration:"none" }}>
+          <BrandMark size={34} />
+          <span className="font-editorial" style={{ fontSize:20, fontWeight:800, color:"#191817", letterSpacing:"-0.02em" }}>
+            Deep<span style={{ color:"#7C8460" }}>Scout</span>
           </span>
         </Link>
-
-        {/* Centered Desktop Nav */}
-        <nav className="hidden md:flex items-center gap-1 bg-[#F6F1E7]/70 p-1.5 rounded-full border border-[#E5DFD3]/60">
-          {navItems.map((item) => {
-            const active = isActive(item.path);
-            return (
-              <Link
-                key={item.path}
-                to={item.path}
-                className={`px-4 py-1.5 rounded-full text-xs font-semibold font-sans-body transition-all ${
-                  active 
-                    ? "bg-[#F4C542] text-[#191817] shadow-sm font-bold" 
-                    : "text-[#77736B] hover:text-[#191817] hover:bg-white/50"
-                }`}
-              >
-                {item.label}
-              </Link>
-            );
-          })}
-        </nav>
-
-        {/* Right CTA Action */}
-        <div className="hidden md:flex items-center gap-3">
-          <button 
-            onClick={() => navigate("/research")}
-            className="btn-gold-pill text-xs py-2 px-4"
-          >
-            <span>+ New Research</span>
-            <ArrowUpRight className="w-4 h-4" />
-          </button>
-        </div>
-
-        {/* Mobile Hamburger Button */}
-        <button 
-          onClick={() => setMobileOpen(!mobileOpen)}
-          className="md:hidden p-2 text-[#191817] hover:bg-[#F6F1E7] rounded-full"
-        >
-          {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-        </button>
-      </div>
-
-      {/* Mobile Navigation Drawer */}
-      {mobileOpen && (
-        <div className="md:hidden mt-2 bg-white/95 backdrop-blur-xl border border-white p-4 rounded-3xl shadow-xl flex flex-col gap-2">
-          {navItems.map((item) => (
-            <Link
-              key={item.path}
-              to={item.path}
-              onClick={() => setMobileOpen(false)}
-              className={`px-4 py-2.5 rounded-2xl text-sm font-semibold transition-all ${
-                isActive(item.path)
-                  ? "bg-[#F4C542] text-[#191817]"
-                  : "text-[#77736B] hover:bg-[#F6F1E7]"
-              }`}
-            >
+        <nav className="ds-nav-pill-bar" id="desk-nav">
+          {navItems.map(item => (
+            <Link key={item.path} to={item.path} className={`ds-nav-link${isActive(item.path) ? " active" : ""}`}>
               {item.label}
             </Link>
           ))}
-          <button 
-            onClick={() => { navigate("/research"); setMobileOpen(false); }}
-            className="btn-gold-pill justify-center mt-2"
-          >
-            <span>+ New Research</span>
-            <ArrowUpRight className="w-4 h-4" />
+        </nav>
+        <div id="desk-cta">
+          <button onClick={() => navigate("/research")} className="btn-gold" style={{ padding:"9px 20px", fontSize:12 }}>
+            New Research <ArrowUpRight size={14} />
+          </button>
+        </div>
+        <button onClick={() => setMobileOpen(!mobileOpen)} id="mob-btn"
+          style={{ padding:8, border:"none", background:"rgba(246,241,231,0.8)", borderRadius:9999, cursor:"pointer", display:"flex" }}>
+          {mobileOpen ? <X size={18} color="#191817"/> : <Menu size={18} color="#191817"/>}
+        </button>
+      </div>
+      {mobileOpen && (
+        <div style={{ margin:"8px auto 0", maxWidth:1280, background:"rgba(255,255,255,0.96)", backdropFilter:"blur(24px)",
+          border:"1px solid rgba(255,255,255,0.9)", borderRadius:28, padding:20, display:"flex", flexDirection:"column", gap:6,
+          boxShadow:"0 16px 40px -8px rgba(25,24,23,0.12)" }}>
+          {navItems.map(item => (
+            <Link key={item.path} to={item.path} onClick={() => setMobileOpen(false)}
+              className={`ds-nav-link${isActive(item.path) ? " active" : ""}`}
+              style={{ padding:"10px 18px", fontSize:14, borderRadius:16 }}>
+              {item.label}
+            </Link>
+          ))}
+          <button onClick={() => { navigate("/research"); setMobileOpen(false); }} className="btn-gold" style={{ justifyContent:"center", marginTop:8 }}>
+            Start New Research <ArrowUpRight size={15} />
           </button>
         </div>
       )}
+      <style>{`
+        #desk-nav, #desk-cta { display: none; }
+        #mob-btn { display: flex; }
+        @media(min-width:768px) {
+          #desk-nav, #desk-cta { display: flex !important; }
+          #mob-btn { display: none !important; }
+        }
+      `}</style>
     </header>
   );
 }
 
-// ----------------------------------------------------
-// 2. HOME PAGE COMPONENT (`/`)
-// ----------------------------------------------------
+const PIPELINE_STAGES = [
+  { num:"01", label:"DISCOVER",  icon: Globe,     desc:"Firecrawl crawls the company website — extracting structured HTML, headings, lists, tables, and paragraphs." },
+  { num:"02", label:"CLEAN",     icon: Filter,    desc:"Content cleaning strips cookie banners, navigation noise, boilerplate, and irrelevant legal text." },
+  { num:"03", label:"CHUNK",     icon: Layers,    desc:"Structure-aware chunking splits documents by semantic boundaries — headings, sections, and paragraph groups." },
+  { num:"04", label:"EMBED",     icon: Cpu,       desc:"Local BAAI/bge-base-en-v1.5 creates 768-dimensional embeddings on NVIDIA RTX 3050 via CUDA." },
+  { num:"05", label:"RETRIEVE",  icon: Database,  desc:"Hybrid retrieval: pgvector cosine similarity + PostgreSQL FTS, fused via Reciprocal Rank Fusion (RRF)." },
+  { num:"06", label:"ANSWER",    icon: Sparkles,  desc:"Gemini synthesizes grounded answers strictly from retrieved evidence — every claim is source-linked." },
+];
+
 function HomePage() {
   const navigate = useNavigate();
+  const [hoveredStage, setHoveredStage] = useState<number | null>(null);
+  const [companies, setCompanies] = useState<CompanyItem[]>([]);
+  useEffect(() => {
+    fetch(`${API_BASE}/api/companies`).then(r => r.ok ? r.json() : []).then(d => { if (Array.isArray(d)) setCompanies(d.slice(0, 4)); }).catch(() => {});
+  }, []);
 
   return (
-    <div className="px-4 md:px-8 max-w-6xl mx-auto pb-12">
-      
-      {/* Large Rounded World Container (Inspired by Reference) */}
-      <div className="deepscout-world-card p-6 md:p-12 relative overflow-hidden">
-        
-        {/* Background Organic Decorative Curved Vector Lines */}
-        <svg className="absolute inset-0 w-full h-full pointer-events-none opacity-25" viewBox="0 0 1000 600" fill="none">
-          <path d="M-100,100 Q200,400 600,100 T1100,300" stroke="#E9B82E" strokeWidth="2" fill="none" />
-          <path d="M0,500 Q400,100 900,500" stroke="#7C8460" strokeWidth="1.5" strokeDasharray="6 6" fill="none" />
-          <circle cx="850" cy="120" r="180" stroke="#F4C542" strokeWidth="1" strokeDasharray="4 4" />
+    <div style={{ padding:"0 16px 60px", maxWidth:1300, margin:"0 auto" }}>
+      {/* HERO */}
+      <div className="ds-world" style={{ padding:"48px 40px 40px", marginBottom:24, position:"relative" }}>
+        <svg style={{ position:"absolute", inset:0, width:"100%", height:"100%", pointerEvents:"none", opacity:0.15 }} viewBox="0 0 1200 560" fill="none">
+          <circle cx="950" cy="120" r="280" stroke="#F4C542" strokeWidth="1.5" strokeDasharray="6 6"/>
+          <circle cx="950" cy="120" r="200" stroke="#7C8460" strokeWidth="1"/>
+          <path d="M-60,440 Q300,160 700,440 T1260,200" stroke="#E9B82E" strokeWidth="2" fill="none"/>
         </svg>
 
-        {/* Top Header Tag */}
-        <div className="flex items-center justify-between mb-8">
-          <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/70 border border-white text-xs font-bold text-[#7C8460] shadow-sm">
-            <Sparkles className="w-3.5 h-3.5 text-[#E9B82E]" />
-            Local BGE Embeddings × Neon pgvector Hybrid RAG
-          </span>
-
-          <div className="hidden sm:flex items-center gap-2 text-xs text-[#77736B]">
-            <span>DeepScout v1.0</span>
-          </div>
-        </div>
-
-        {/* Hero Main Grid Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center relative z-10">
-          
-          {/* Left Column: Headline, Description & CTA */}
-          <div className="lg:col-span-7 flex flex-col items-start gap-6">
-            <h1 className="font-editorial text-4xl sm:text-5xl lg:text-6xl font-extrabold text-[#191817] leading-[1.1] tracking-tight">
-              Company Intelligence,<br />
-              <span className="italic font-normal text-[#7C8460]">Beautified & Grounded.</span>
+        <div id="hero-grid" style={{ display:"grid", gridTemplateColumns:"1fr", gap:40, alignItems:"center", position:"relative", zIndex:1 }}>
+          {/* Left */}
+          <div style={{ display:"flex", flexDirection:"column", gap:24 }}>
+            <div style={{ display:"inline-flex", alignItems:"center", gap:8, padding:"6px 14px", borderRadius:9999, background:"rgba(255,255,255,0.7)", border:"1px solid rgba(255,255,255,0.9)", fontSize:11, fontWeight:700, color:"#7C8460", width:"fit-content" }}>
+              <Sparkles size={13} color="#E9B82E"/> AI COMPANY INTELLIGENCE
+            </div>
+            <h1 className="font-editorial" style={{ fontSize:"clamp(36px,5vw,64px)", fontWeight:800, color:"#191817", lineHeight:1.08, letterSpacing:"-0.02em" }}>
+              Research any company.<br/>
+              <em style={{ fontStyle:"italic", fontWeight:400, color:"#7C8460" }}>Understand the evidence.</em>
             </h1>
-
-            <p className="text-base text-[#5C5850] leading-relaxed max-w-lg font-sans-body">
-              Research any target company directly from its public web footprint. DeepScout automatically crawls, structure-chunks, vector-indexes, and outputs verified grounded answers with direct source evidence.
+            <p style={{ fontSize:15, color:"#5C5850", lineHeight:1.72, maxWidth:480, fontFamily:"'Manrope',sans-serif" }}>
+              DeepScout investigates company websites, builds a searchable evidence base, and generates grounded answers backed by real, retrievable sources.
             </p>
-
-            <div className="flex items-center gap-4 pt-2">
-              <button 
-                onClick={() => navigate("/research")}
-                className="btn-gold-pill text-sm py-3.5 px-7 shadow-lg shadow-[#F4C542]/40"
-              >
-                <span className="text-base">START RESEARCH</span>
-                <ArrowUpRight className="w-5 h-5" />
+            <div style={{ display:"flex", alignItems:"center", gap:12, flexWrap:"wrap" }}>
+              <button onClick={() => navigate("/research")} className="btn-gold" style={{ padding:"14px 32px", fontSize:14 }}>
+                START RESEARCH <ArrowUpRight size={16}/>
               </button>
-
-              <button 
-                onClick={() => navigate("/companies")}
-                className="px-6 py-3.5 rounded-full bg-white/80 hover:bg-white text-[#191817] font-bold text-xs border border-white transition-all shadow-sm"
-              >
-                Browse Directory
+              <button onClick={() => navigate("/companies")} className="btn-ghost" style={{ padding:"13px 28px", fontSize:14 }}>
+                Explore Companies
               </button>
+            </div>
+            <div style={{ display:"flex", gap:28, flexWrap:"wrap", paddingTop:8 }}>
+              {[["768d","Local BGE Embeddings"],["RRF","Hybrid Retrieval Fusion"],["CUDA","GPU Accelerated"]].map(([v,d]) => (
+                <div key={v} style={{ display:"flex", flexDirection:"column", gap:2 }}>
+                  <span className="font-editorial" style={{ fontSize:22, fontWeight:700, color:"#191817" }}>{v}</span>
+                  <span style={{ fontSize:10, fontWeight:600, color:"#77736B", textTransform:"uppercase", letterSpacing:"0.06em" }}>{d}</span>
+                </div>
+              ))}
             </div>
           </div>
 
-          {/* Right Column: Original Anime-Style Research Illustration & Floating Cards */}
-          <div className="lg:col-span-5 relative flex items-center justify-center">
-            
-            {/* SVG Original Anime Intelligence Illustration */}
-            <div className="w-full max-w-sm aspect-square relative flex items-center justify-center">
-              <div className="absolute inset-0 bg-gradient-to-tr from-[#F4C542]/20 via-[#7C8460]/20 to-transparent rounded-full blur-3xl animate-pulse" />
-              
-              <svg viewBox="0 0 400 400" className="w-full h-full relative z-10 drop-shadow-xl" fill="none">
-                {/* Outer Knowledge Ring */}
-                <circle cx="200" cy="200" r="160" stroke="#F4C542" strokeWidth="2" strokeDasharray="8 8" opacity="0.6" />
-                <circle cx="200" cy="200" r="130" stroke="#7C8460" strokeWidth="1.5" opacity="0.4" />
-                
-                {/* Anime Stylized Researcher Silhouette & Floating Document Nodes */}
-                <path d="M150 280 C150 220, 250 220, 250 280 L230 340 L170 340 Z" fill="#191817" opacity="0.85" />
-                <circle cx="200" cy="180" r="45" fill="#F4C542" />
-                <path d="M175 170 Q200 150 225 170 Q210 200 175 170" fill="#191817" />
-                
-                {/* Floating Document Cards Graphic */}
-                <rect x="70" y="110" width="80" height="50" rx="12" fill="#ffffff" opacity="0.9" stroke="#E5DFD3" />
-                <path d="M85 130 L135 130 M85 142 L115 142" stroke="#7C8460" strokeWidth="3" strokeLinecap="round" />
-                
-                <rect x="250" y="130" width="90" height="60" rx="12" fill="#ffffff" opacity="0.9" />
-                <path d="M265 155 L325 155 M265 170 L300 170" stroke="#F4C542" strokeWidth="3" strokeLinecap="round" />
-
-                <circle cx="295" cy="100" r="14" fill="#7C8460" />
-                <path d="M290 100 L300 100 M295 95 L295 105" stroke="#ffffff" strokeWidth="2" />
+          {/* Right: Illustration */}
+          <div style={{ display:"flex", alignItems:"center", justifyContent:"center", position:"relative" }}>
+            <div style={{ width:"100%", maxWidth:380, aspectRatio:"1/1", position:"relative" }}>
+              <div style={{ position:"absolute", inset:"10%", background:"radial-gradient(circle, rgba(244,197,66,0.25) 0%, rgba(124,132,96,0.12) 55%, transparent 80%)", borderRadius:"50%", filter:"blur(28px)" }} className="anim-pulse-soft"/>
+              <svg viewBox="0 0 400 400" style={{ width:"100%", height:"100%", position:"relative", zIndex:2 }} fill="none">
+                <circle cx="200" cy="200" r="168" stroke="#F4C542" strokeWidth="2" strokeDasharray="8 10" opacity="0.5" className="anim-spin-slow"/>
+                <circle cx="200" cy="200" r="138" stroke="#7C8460" strokeWidth="1.2" opacity="0.3"/>
+                <ellipse cx="200" cy="290" rx="50" ry="20" fill="rgba(124,132,96,0.12)"/>
+                <path d="M178 308 Q178 252, 222 252 Q222 308 178 308 Z" fill="#252321" opacity="0.9"/>
+                <path d="M185 268 L200 278 L215 268" stroke="#F4C542" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <circle cx="200" cy="210" r="44" fill="#F4C542"/>
+                <path d="M160 200 Q162 170 200 165 Q238 170 240 200" fill="#252321"/>
+                <path d="M160 200 L156 212 L160 209" fill="#252321"/>
+                <path d="M240 200 L244 212 L240 209" fill="#252321"/>
+                <ellipse cx="189" cy="208" rx="5.5" ry="6.5" fill="#191817"/>
+                <ellipse cx="211" cy="208" rx="5.5" ry="6.5" fill="#191817"/>
+                <circle cx="191" cy="206" r="2" fill="white"/>
+                <circle cx="213" cy="206" r="2" fill="white"/>
+                <path d="M180 207 L185 207 M206 207 L212 207" stroke="#191817" strokeWidth="1.5"/>
+                <rect x="183" y="202" width="12" height="9" rx="4" fill="none" stroke="#191817" strokeWidth="1.5"/>
+                <rect x="205" y="202" width="12" height="9" rx="4" fill="none" stroke="#191817" strokeWidth="1.5"/>
+                <path d="M194 222 Q200 226 206 222" stroke="#191817" strokeWidth="1.8" strokeLinecap="round" fill="none"/>
+                <path d="M196 165 Q192 150 197 143 Q203 152 200 165" fill="#252321"/>
+                <g className="anim-float" style={{ transformOrigin:"110px 130px" }}>
+                  <rect x="65" y="108" width="82" height="50" rx="13" fill="white" opacity="0.92" stroke="#E5DFD3"/>
+                  <rect x="77" y="120" width="38" height="5" rx="2.5" fill="#F4C542"/>
+                  <rect x="77" y="130" width="54" height="3" rx="1.5" fill="#E5DFD3"/>
+                  <rect x="77" y="138" width="44" height="3" rx="1.5" fill="#E5DFD3"/>
+                </g>
+                <g className="anim-float-down" style={{ transformOrigin:"308px 158px" }}>
+                  <rect x="256" y="132" width="88" height="54" rx="13" fill="white" opacity="0.92" stroke="#E5DFD3"/>
+                  <rect x="268" y="144" width="44" height="5" rx="2.5" fill="#7C8460"/>
+                  <rect x="268" y="154" width="60" height="3" rx="1.5" fill="#E5DFD3"/>
+                  <rect x="268" y="162" width="48" height="3" rx="1.5" fill="#E5DFD3"/>
+                  <rect x="268" y="170" width="32" height="3" rx="1.5" fill="#F4C542" opacity="0.6"/>
+                </g>
+                <g className="anim-float" style={{ transformOrigin:"78px 308px", animationDelay:"1.2s" }}>
+                  <rect x="48" y="288" width="70" height="42" rx="12" fill="white" opacity="0.85" stroke="#E5DFD3"/>
+                  <rect x="58" y="298" width="34" height="4" rx="2" fill="#F4C542"/>
+                  <rect x="58" y="307" width="46" height="3" rx="1.5" fill="#E5DFD3"/>
+                  <rect x="58" y="315" width="36" height="3" rx="1.5" fill="#E5DFD3"/>
+                </g>
+                <path d="M165 210 L147 158" stroke="#F4C542" strokeWidth="1.2" strokeDasharray="4 4" opacity="0.45"/>
+                <path d="M238 210 L256 172" stroke="#7C8460" strokeWidth="1.2" strokeDasharray="4 4" opacity="0.45"/>
+                <path d="M180 252 L118 300" stroke="#E9B82E" strokeWidth="1" strokeDasharray="4 4" opacity="0.35"/>
+                <circle cx="306" cy="96" r="15" fill="#7C8460" opacity="0.85"/>
+                <text x="306" y="102" textAnchor="middle" fill="white" fontSize="9" fontWeight="700">BGE</text>
+                <circle cx="100" cy="76" r="12" fill="#F4C542" opacity="0.85"/>
+                <text x="100" y="81" textAnchor="middle" fill="#191817" fontSize="9" fontWeight="700">RAG</text>
               </svg>
-
-              {/* Small Floating Information Pill Cards (Inspired by Reference) */}
-              <div className="card-warm-glass p-3 rounded-2xl absolute -top-2 -left-4 animate-float-gentle flex items-center gap-2.5 shadow-lg">
-                <div className="w-7 h-7 rounded-xl bg-[#F4C542] flex items-center justify-center text-[#191817] font-bold text-xs">
-                  42
+              <div className="ds-card anim-float" style={{ position:"absolute", top:-6, left:-14, padding:"10px 14px", display:"flex", alignItems:"center", gap:10 }}>
+                <div style={{ width:32, height:32, borderRadius:10, background:"#F4C542", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                  <Database size={16} color="#191817"/>
                 </div>
-                <div className="text-[11px] font-bold text-[#191817] leading-tight">
-                  Sources<br /><span className="text-[#77736B] font-normal">Indexed</span>
+                <div>
+                  <div style={{ fontSize:12, fontWeight:800, color:"#191817" }}>pgvector</div>
+                  <div style={{ fontSize:10, color:"#77736B" }}>Neon PostgreSQL</div>
                 </div>
               </div>
-
-              <div className="card-warm-glass p-3 rounded-2xl absolute bottom-4 -right-4 animate-float-reverse flex items-center gap-2.5 shadow-lg">
-                <div className="w-7 h-7 rounded-xl bg-[#7C8460] flex items-center justify-center text-white font-bold text-xs">
-                  768
+              <div className="ds-card anim-float-down" style={{ position:"absolute", bottom:6, right:-18, padding:"10px 14px", display:"flex", alignItems:"center", gap:10 }}>
+                <div style={{ width:32, height:32, borderRadius:10, background:"#7C8460", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                  <Cpu size={16} color="white"/>
                 </div>
-                <div className="text-[11px] font-bold text-[#191817] leading-tight">
-                  Local BGE<br /><span className="text-[#77736B] font-normal">CUDA Embeddings</span>
+                <div>
+                  <div style={{ fontSize:12, fontWeight:800, color:"#191817" }}>768d Local</div>
+                  <div style={{ fontSize:10, color:"#77736B" }}>CUDA Embeddings</div>
                 </div>
               </div>
             </div>
-
           </div>
         </div>
 
-        {/* Bottom Feature Pill Cards Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-12 pt-8 border-t border-[#E5DFD3]/80">
+        {/* Feature Strip */}
+        <div id="feat-strip" style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:14, marginTop:36, paddingTop:28, borderTop:"1px solid rgba(229,223,211,0.8)", position:"relative", zIndex:1 }}>
           {[
-            { title: "Firecrawl Web Scan", desc: "Structure-aware crawler", icon: Globe },
-            { title: "Local BGE CUDA", desc: "768d GPU vectors", icon: Zap },
-            { title: "pgvector Hybrid RRF", desc: "Vector + FTS fusion", icon: Layers },
-            { title: "Gemini Grounded", desc: "Strict citation parser", icon: ShieldCheck }
-          ].map((item, i) => {
-            const IconComp = item.icon;
+            { icon:Globe,       title:"Firecrawl Crawl",  desc:"Full website extraction" },
+            { icon:Cpu,         title:"Local BGE CUDA",   desc:"768d GPU vector index" },
+            { icon:Database,    title:"pgvector Hybrid",  desc:"FTS + cosine via RRF" },
+            { icon:ShieldCheck, title:"Gemini Grounded",  desc:"Strict citation synthesis" },
+          ].map((f, i) => {
+            const Ic = f.icon;
             return (
-              <div key={i} className="card-warm-glass p-4 flex flex-col gap-1">
-                <div className="w-8 h-8 rounded-full bg-[#F6F1E7] border border-[#E5DFD3] flex items-center justify-center text-[#7C8460] mb-1">
-                  <IconComp className="w-4 h-4" />
+              <div key={i} className="ds-card" style={{ padding:"18px 16px", display:"flex", flexDirection:"column", gap:8 }}>
+                <div style={{ width:34, height:34, borderRadius:10, background:"rgba(246,241,231,0.9)", border:"1px solid rgba(229,223,211,0.7)", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                  <Ic size={16} color="#7C8460"/>
                 </div>
-                <h4 className="font-bold text-xs text-[#191817]">{item.title}</h4>
-                <p className="text-[11px] text-[#77736B]">{item.desc}</p>
+                <div style={{ fontSize:12, fontWeight:700, color:"#191817" }}>{f.title}</div>
+                <div style={{ fontSize:11, color:"#77736B" }}>{f.desc}</div>
               </div>
             );
           })}
         </div>
-
       </div>
+
+      {/* PIPELINE SECTION */}
+      <div style={{ marginBottom:24 }}>
+        <div className="ds-world" style={{ padding:"40px" }}>
+          <div style={{ textAlign:"center", marginBottom:32 }}>
+            <div className="ds-label" style={{ marginBottom:8 }}>Intelligence Pipeline</div>
+            <h2 className="font-editorial" style={{ fontSize:"clamp(28px,3.5vw,42px)", fontWeight:700, color:"#191817" }}>
+              From website to intelligence.
+            </h2>
+            <p style={{ fontSize:14, color:"#5C5850", marginTop:10, maxWidth:500, margin:"10px auto 0" }}>
+              Every answer is grounded in real pages — hover each stage to learn more.
+            </p>
+          </div>
+          <div id="pipeline-stages" style={{ display:"flex", alignItems:"stretch", gap:0, overflowX:"auto", paddingBottom:4 }}>
+            {PIPELINE_STAGES.map((stage, i) => {
+              const Ic = stage.icon;
+              const isH = hoveredStage === i;
+              return (
+                <div key={i} style={{ display:"flex", alignItems:"center", flex:1, minWidth:72 }}>
+                  <div className={`ds-step${isH ? " active" : ""}`} style={{ flex:1, position:"relative", cursor:"default" }}
+                    onMouseEnter={() => setHoveredStage(i)} onMouseLeave={() => setHoveredStage(null)}>
+                    <div style={{ width:36, height:36, borderRadius:"50%", background:isH?"rgba(25,24,23,0.12)":"rgba(124,132,96,0.1)", display:"flex", alignItems:"center", justifyContent:"center", transition:"background 0.2s" }}>
+                      <Ic size={16} color={isH?"#191817":"#7C8460"}/>
+                    </div>
+                    <span style={{ fontSize:10, fontWeight:800, color:isH?"#191817":"#7C8460", letterSpacing:"0.05em" }}>{stage.num}</span>
+                    <span style={{ fontSize:10, fontWeight:700, color:isH?"#191817":"#252321", textAlign:"center", lineHeight:1.3 }}>{stage.label}</span>
+                    {isH && (
+                      <div style={{ position:"absolute", bottom:"calc(100% + 12px)", left:"50%", transform:"translateX(-50%)", background:"#191817", color:"white", borderRadius:16, padding:"12px 16px", fontSize:12, lineHeight:1.6, width:200, textAlign:"center", zIndex:10, boxShadow:"0 8px 24px rgba(25,24,23,0.22)" }}>
+                        {stage.desc}
+                        <div style={{ position:"absolute", bottom:-6, left:"50%", transform:"translateX(-50%) rotate(45deg)", width:12, height:12, background:"#191817", borderRadius:3 }}/>
+                      </div>
+                    )}
+                  </div>
+                  {i < PIPELINE_STAGES.length - 1 && <div className="ds-pipe-line" style={{ minWidth:10 }}/>}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* FEATURE CARDS */}
+      <div style={{ marginBottom:24 }}>
+        <div className="ds-world" style={{ padding:"40px" }}>
+          <div style={{ textAlign:"center", marginBottom:32 }}>
+            <div className="ds-label" style={{ marginBottom:8 }}>Why DeepScout</div>
+            <h2 className="font-editorial" style={{ fontSize:"clamp(26px,3.5vw,38px)", fontWeight:700, color:"#191817" }}>Built around evidence.</h2>
+          </div>
+          <div id="feat-cards" style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:20 }}>
+            {[
+              { icon:ShieldCheck, bg:"#FEF3C7",               ic:"#92400E", title:"Source-Grounded",
+                desc:"Every answer traces back to retrieved, vector-matched evidence. No hallucination. Pure grounded intelligence." },
+              { icon:Cpu,         bg:"rgba(124,132,96,0.10)", ic:"#7C8460", title:"Local Embeddings",
+                desc:"BGE embeddings run on your local GPU via CUDA. Your data stays private. No external embedding API calls." },
+              { icon:BarChart3,   bg:"#D1FAE5",               ic:"#065F46", title:"Hybrid Retrieval",
+                desc:"Cosine similarity + PostgreSQL full-text search fused via Reciprocal Rank Fusion (RRF) for superior recall." },
+            ].map((card, i) => {
+              const Ic = card.icon;
+              return (
+                <div key={i} className="ds-card-feat">
+                  <div style={{ width:48, height:48, borderRadius:16, background:card.bg, display:"flex", alignItems:"center", justifyContent:"center", marginBottom:16 }}>
+                    <Ic size={22} color={card.ic}/>
+                  </div>
+                  <h3 className="font-editorial" style={{ fontSize:17, fontWeight:700, color:"#191817", marginBottom:8 }}>{card.title}</h3>
+                  <p style={{ fontSize:13, color:"#5C5850", lineHeight:1.7 }}>{card.desc}</p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* RECENT RESEARCH */}
+      {companies.length > 0 && (
+        <div style={{ marginBottom:24 }}>
+          <div className="ds-world" style={{ padding:"40px" }}>
+            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:28 }}>
+              <div>
+                <div className="ds-label" style={{ marginBottom:6 }}>Research Directory</div>
+                <h2 className="font-editorial" style={{ fontSize:"clamp(22px,3vw,32px)", fontWeight:700, color:"#191817" }}>Recent Research</h2>
+              </div>
+              <button onClick={() => navigate("/companies")} className="btn-ghost" style={{ fontSize:12, padding:"9px 20px" }}>
+                View All <ChevronRight size={14}/>
+              </button>
+            </div>
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))", gap:18 }}>
+              {companies.map(c => (
+                <div key={c.id} className="ds-card ds-card-hover" style={{ padding:"22px", cursor:"pointer", display:"flex", flexDirection:"column", gap:12 }}
+                  onClick={() => navigate(`/research/${c.id}`)}>
+                  <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+                    <span className="ds-badge ds-badge-green">● READY</span>
+                    <ArrowUpRight size={15} color="#7C8460"/>
+                  </div>
+                  <h3 className="font-editorial" style={{ fontSize:15, fontWeight:700, color:"#191817", lineHeight:1.3 }}>{c.name}</h3>
+                  <p style={{ fontSize:11, color:"#77736B", fontFamily:"'JetBrains Mono',monospace", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+                    {c.website_url}
+                  </p>
+                  <div style={{ paddingTop:10, borderTop:"1px solid rgba(229,223,211,0.7)", fontSize:11, color:"#7C8460", fontWeight:600 }}>OPEN WORKSPACE →</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* FINAL CTA */}
+      <div className="ds-world" style={{ padding:"52px 40px", textAlign:"center", position:"relative", overflow:"hidden" }}>
+        <div style={{ position:"absolute", inset:0, background:"radial-gradient(circle at 50% 50%, rgba(244,197,66,0.12) 0%, transparent 70%)", pointerEvents:"none" }}/>
+        <div style={{ position:"relative", zIndex:1 }}>
+          <div className="ds-label" style={{ marginBottom:12 }}>Ready to Start?</div>
+          <h2 className="font-editorial" style={{ fontSize:"clamp(28px,4vw,48px)", fontWeight:700, color:"#191817", marginBottom:16 }}>
+            Ready to investigate <em style={{ color:"#7C8460" }}>a company?</em>
+          </h2>
+          <p style={{ fontSize:14, color:"#5C5850", marginBottom:32, maxWidth:420, marginLeft:"auto", marginRight:"auto" }}>
+            Enter any company name and website. DeepScout handles the rest.
+          </p>
+          <button onClick={() => navigate("/research")} className="btn-gold" style={{ padding:"16px 40px", fontSize:15 }}>
+            START NEW RESEARCH <ArrowUpRight size={18}/>
+          </button>
+        </div>
+      </div>
+
+      <style>{`
+        @media(min-width:900px) { #hero-grid { grid-template-columns: 7fr 5fr !important; } }
+        @media(max-width:900px) { #feat-strip, #feat-cards { grid-template-columns: 1fr 1fr !important; } }
+        @media(max-width:600px) {
+          #feat-strip { grid-template-columns: 1fr 1fr !important; }
+          #feat-cards { grid-template-columns: 1fr !important; }
+          #pipeline-stages { flex-direction: column !important; }
+          .ds-pipe-line { width: 2px !important; height: 16px !important; flex: none !important; min-width: 0 !important;
+            background: linear-gradient(180deg, rgba(229,223,211,0.4), rgba(244,197,66,0.5), rgba(229,223,211,0.4)) !important; }
+        }
+      `}</style>
     </div>
   );
 }
 
-// ----------------------------------------------------
-// 3. RESEARCH PAGE COMPONENT (`/research`)
-// ----------------------------------------------------
+/* ── RESEARCH PAGE ── */
+const JOB_STEPS = [
+  { key:"discover", label:"DISCOVER", icon: Globe },
+  { key:"clean",    label:"CLEAN",    icon: Filter },
+  { key:"chunk",    label:"CHUNK",    icon: Layers },
+  { key:"embed",    label:"EMBED",    icon: Cpu },
+  { key:"retrieve", label:"RETRIEVE", icon: Database },
+  { key:"answer",   label:"ANSWER",   icon: Sparkles },
+];
+type JobStep = "idle"|"discover"|"clean"|"chunk"|"embed"|"retrieve"|"answer"|"done"|"error";
+
 function ResearchPage() {
   const navigate = useNavigate();
   const [companyName, setCompanyName] = useState("");
   const [companyUrl, setCompanyUrl] = useState("");
   const [triggering, setTriggering] = useState(false);
   const [formError, setFormError] = useState("");
+  const [jobId, setJobId] = useState<string|null>(null);
+  const [jobData, setJobData] = useState<JobStatus|null>(null);
+  const [currentStep, setCurrentStep] = useState<JobStep>("idle");
+  const pollRef = useRef<ReturnType<typeof setInterval>|null>(null);
+  const cIdRef = useRef<string|null>(null);
 
-  const handleStartResearch = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setFormError("");
-    
-    if (!companyName.trim() || !companyUrl.trim()) {
-      setFormError("Please enter both Company Name and Website URL.");
-      return;
-    }
+  const getStep = (s: string): JobStep => {
+    if (s==="pending"||s==="crawling") return "discover";
+    if (s==="processing") return "chunk";
+    if (s==="embedding")  return "embed";
+    if (s==="indexing")   return "retrieve";
+    if (s==="completed")  return "done";
+    if (s==="failed")     return "error";
+    return "discover";
+  };
+  const startPolling = useCallback((jId: string) => {
+    if (pollRef.current) clearInterval(pollRef.current);
+    pollRef.current = setInterval(async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/jobs/${jId}`);
+        if (res.ok) {
+          const data: JobStatus = await res.json();
+          setJobData(data); setCurrentStep(getStep(data.status));
+          if (data.status==="completed"||data.status==="failed") {
+            if (pollRef.current) clearInterval(pollRef.current);
+            if (data.status==="completed"&&cIdRef.current) setTimeout(()=>navigate(`/research/${cIdRef.current}`),1200);
+          }
+        }
+      } catch {}
+    }, 1800);
+  }, [navigate]);
+  useEffect(()=>()=>{ if (pollRef.current) clearInterval(pollRef.current); },[]);
 
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault(); setFormError("");
+    if (!companyName.trim()||!companyUrl.trim()) { setFormError("Please enter both Company Name and Website URL."); return; }
     setTriggering(true);
     try {
-      const res = await fetch(`${API_BASE}/api/research`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          company_name: companyName.trim(),
-          company_url: companyUrl.trim()
-        })
-      });
-
+      const res = await fetch(`${API_BASE}/api/research`,{ method:"POST", headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({company_name:companyName.trim(),company_url:companyUrl.trim()}) });
       if (res.ok) {
         const data = await res.json();
-        navigate(`/research/${data.company_id}`);
+        cIdRef.current = data.company_id; setJobId(data.job_id); setCurrentStep("discover"); startPolling(data.job_id);
       } else {
-        const errData = await res.json();
-        setFormError(errData.detail || "Failed to trigger research job.");
+        const err = await res.json(); setFormError(err.detail||"Failed to start research."); setTriggering(false);
       }
-    } catch (e) {
-      setFormError("Connection error. Is backend server active at port 8000?");
-    } finally {
-      setTriggering(false);
-    }
+    } catch { setFormError("Connection error. Is the backend running at port 8000?"); setTriggering(false); }
   };
 
+  const stepIdx = JOB_STEPS.findIndex(s=>s.key===currentStep);
+
   return (
-    <div className="px-4 md:px-8 max-w-4xl mx-auto pb-12">
-      <div className="deepscout-world-card p-8 md:p-12 flex flex-col items-center text-center">
-        
-        <span className="px-3.5 py-1 rounded-full bg-white border border-[#E5DFD3] text-xs font-bold text-[#7C8460] mb-4">
-          // DEEPSCOUT RESEARCH ENGINE
-        </span>
-
-        <h1 className="font-editorial text-3xl md:text-4xl font-bold text-[#191817] mb-3">
-          Research a Company
-        </h1>
-
-        <p className="text-sm text-[#5C5850] max-w-lg mb-8 leading-relaxed font-sans-body">
-          Enter a target company and its domain URL to build an evidence-backed intelligence workspace grounded in vector-indexed source pages.
-        </p>
-
-        {/* Warm Centered Form Card */}
-        <form onSubmit={handleStartResearch} className="card-warm-glass p-8 w-full max-w-lg flex flex-col gap-5 text-left shadow-lg">
-          <div className="flex flex-col gap-2">
-            <label className="text-xs font-bold text-[#191817] uppercase tracking-wider flex items-center gap-2">
-              <Building2 className="w-4 h-4 text-[#7C8460]" /> Company Name
-            </label>
-            <input 
-              type="text" 
-              value={companyName}
-              onChange={(e) => setCompanyName(e.target.value)}
-              placeholder="e.g. Tata Consultancy Services" 
-              disabled={triggering}
-              className="input-warm"
-            />
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <label className="text-xs font-bold text-[#191817] uppercase tracking-wider flex items-center gap-2">
-              <Globe className="w-4 h-4 text-[#7C8460]" /> Website URL
-            </label>
-            <input 
-              type="text" 
-              value={companyUrl}
-              onChange={(e) => setCompanyUrl(e.target.value)}
-              placeholder="e.g. https://www.tcs.com/" 
-              disabled={triggering}
-              className="input-warm font-mono text-xs"
-            />
-          </div>
-
-          {formError && (
-            <div className="text-xs text-rose-700 bg-rose-50 border border-rose-200 p-3.5 rounded-2xl flex items-center gap-2">
-              <XCircle className="w-4 h-4 text-rose-500 shrink-0" />
-              {formError}
-            </div>
-          )}
-
-          <button 
-            type="submit" 
-            disabled={triggering}
-            className="btn-gold-pill justify-center py-3.5 text-sm font-bold mt-2 shadow-md shadow-[#F4C542]/30"
-          >
-            {triggering ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin text-[#191817]" />
-                Initializing Pipeline...
-              </>
-            ) : (
-              <>
-                START RESEARCH
-                <ArrowUpRight className="w-5 h-5" />
-              </>
-            )}
-          </button>
-        </form>
-
-        {/* Visual RAG Journey Pipeline */}
-        <div className="grid grid-cols-5 gap-2 w-full max-w-xl mt-10 text-center font-sans-body">
-          {["DISCOVER", "UNDERSTAND", "INDEX", "RETRIEVE", "READY"].map((step, i) => (
-            <div key={i} className="card-warm-glass p-2.5 flex flex-col gap-1 text-[11px]">
-              <span className="font-bold text-[#7C8460]">0{i + 1}</span>
-              <span className="font-bold text-[#191817] text-[10px]">{step}</span>
-            </div>
-          ))}
+    <div style={{ padding:"0 16px 60px", maxWidth:960, margin:"0 auto" }}>
+      <div className="ds-world" style={{ padding:"48px 40px" }}>
+        <div style={{ textAlign:"center", marginBottom:36 }}>
+          <div className="ds-label" style={{ marginBottom:8 }}>DEEPSCOUT RESEARCH ENGINE</div>
+          <h1 className="font-editorial" style={{ fontSize:"clamp(28px,4vw,48px)", fontWeight:800, color:"#191817", letterSpacing:"-0.02em" }}>
+            Research a Company
+          </h1>
+          <p style={{ fontSize:14, color:"#5C5850", marginTop:12, maxWidth:500, margin:"12px auto 0", lineHeight:1.7 }}>
+            Give DeepScout a company and its website. We'll investigate, index the evidence, and build a grounded intelligence workspace.
+          </p>
         </div>
 
+        {!jobId ? (
+          <div style={{ maxWidth:560, margin:"0 auto" }}>
+            <form onSubmit={handleSubmit}>
+              <div className="ds-card" style={{ padding:36, display:"flex", flexDirection:"column", gap:20 }}>
+                <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                  <label style={{ fontSize:11, fontWeight:700, color:"#191817", textTransform:"uppercase", letterSpacing:"0.1em", display:"flex", alignItems:"center", gap:6 }}>
+                    <Building2 size={14} color="#7C8460"/> Company Name
+                  </label>
+                  <input type="text" value={companyName} onChange={e=>setCompanyName(e.target.value)}
+                    placeholder="e.g. Tata Consultancy Services" disabled={triggering} className="ds-input"/>
+                </div>
+                <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                  <label style={{ fontSize:11, fontWeight:700, color:"#191817", textTransform:"uppercase", letterSpacing:"0.1em", display:"flex", alignItems:"center", gap:6 }}>
+                    <Globe size={14} color="#7C8460"/> Website URL
+                  </label>
+                  <input type="text" value={companyUrl} onChange={e=>setCompanyUrl(e.target.value)}
+                    placeholder="e.g. https://www.tcs.com/" disabled={triggering} className="ds-input font-code" style={{ fontSize:13 }}/>
+                </div>
+                {formError && (
+                  <div style={{ display:"flex", alignItems:"center", gap:8, padding:"12px 16px", background:"rgba(254,226,226,0.6)", border:"1px solid rgba(153,27,27,0.15)", borderRadius:14, fontSize:12, color:"#991B1B" }}>
+                    <XCircle size={15} color="#ef4444" style={{ flexShrink:0 }}/> {formError}
+                  </div>
+                )}
+                <button type="submit" disabled={triggering} className="btn-gold" style={{ justifyContent:"center", padding:"15px", fontSize:14, marginTop:4 }}>
+                  {triggering ? <><Loader2 size={16} style={{ animation:"spin 1s linear infinite" }}/> Initializing...</> : <>START RESEARCH <ArrowUpRight size={17}/></>}
+                </button>
+              </div>
+            </form>
+            <div style={{ marginTop:22, display:"flex", alignItems:"center", gap:0 }}>
+              {JOB_STEPS.map((s,i)=>{
+                const Ic=s.icon;
+                return (
+                  <div key={s.key} style={{ display:"flex", alignItems:"center", flex:1 }}>
+                    <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", gap:5, padding:"10px 4px", borderRadius:14, background:"rgba(255,255,255,0.5)", border:"1px solid rgba(229,223,211,0.4)" }}>
+                      <Ic size={14} color="#9E988D"/>
+                      <span style={{ fontSize:8, fontWeight:700, color:"#9E988D", textTransform:"uppercase", letterSpacing:"0.05em" }}>{s.label}</span>
+                    </div>
+                    {i<JOB_STEPS.length-1&&<div style={{ height:1, minWidth:8, flex:"0 0 8px", background:"rgba(229,223,211,0.5)" }}/>}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ) : (
+          <div style={{ maxWidth:640, margin:"0 auto" }}>
+            <div className="ds-card" style={{ padding:32, display:"flex", flexDirection:"column", gap:28 }}>
+              <div style={{ textAlign:"center" }}>
+                <div style={{ width:56, height:56, borderRadius:"50%", background:"rgba(244,197,66,0.15)", border:"2px solid #F4C542", display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 14px" }}>
+                  {currentStep==="done" ? <Check size={24} color="#065F46"/> : currentStep==="error" ? <AlertTriangle size={24} color="#991B1B"/> :
+                    <Loader2 size={24} color="#F4C542" style={{ animation:"spin 1s linear infinite" }}/>}
+                </div>
+                <div style={{ fontSize:15, fontWeight:700, color:"#191817" }}>
+                  {currentStep==="done" ? "Research Complete! Redirecting..." : currentStep==="error" ? "Research Failed" : `Investigating ${companyName}...`}
+                </div>
+                {jobData && (
+                  <div style={{ fontSize:12, color:"#77736B", marginTop:4 }}>
+                    {jobData.pages_discovered ? `${jobData.pages_discovered} pages discovered` : ""}
+                    {jobData.pages_processed  ? ` · ${jobData.pages_processed} processed` : ""}
+                  </div>
+                )}
+              </div>
+              <div style={{ display:"flex", gap:0, alignItems:"center" }}>
+                {JOB_STEPS.map((s,i)=>{
+                  const Ic=s.icon; const done=stepIdx>i||currentStep==="done"; const active=stepIdx===i&&currentStep!=="done"&&currentStep!=="error";
+                  return (
+                    <div key={s.key} style={{ display:"flex", alignItems:"center", flex:1 }}>
+                      <div className={`ds-step${active?" active":done?" done":""}`} style={{ flex:1, gap:4 }}>
+                        {done?<Check size={13} color="#065F46"/>:<Ic size={13} color={active?"#191817":"#9E988D"}/>}
+                        <span style={{ fontSize:8, fontWeight:700, letterSpacing:"0.05em", textTransform:"uppercase", color:done?"#065F46":active?"#191817":"#9E988D" }}>{s.label}</span>
+                      </div>
+                      {i<JOB_STEPS.length-1&&<div className="ds-pipe-line" style={{ minWidth:8 }}/>}
+                    </div>
+                  );
+                })}
+              </div>
+              {jobData?.logs && (
+                <div className="font-code" style={{ background:"rgba(25,24,23,0.05)", borderRadius:14, padding:"14px 18px", fontSize:11, color:"#5C5850", lineHeight:1.7, maxHeight:120, overflowY:"auto", border:"1px solid rgba(229,223,211,0.5)" }}>
+                  {jobData.logs.split("\n").slice(-6).join("\n")}
+                </div>
+              )}
+              {currentStep==="error" && (
+                <button onClick={()=>{setJobId(null);setTriggering(false);setCurrentStep("idle");}} className="btn-ghost" style={{ justifyContent:"center" }}>
+                  <RefreshCw size={14}/> Try Again
+                </button>
+              )}
+            </div>
+          </div>
+        )}
       </div>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }
 
-// ----------------------------------------------------
-// 4. SELECTED COMPANY WORKSPACE (`/research/:companyId`)
-// ----------------------------------------------------
+/* ── COMPANY WORKSPACE PAGE ── */
 function CompanyWorkspacePage() {
   const { companyId } = useParams<{ companyId: string }>();
   const navigate = useNavigate();
-
-  const [company, setCompany] = useState<CompanyItem | null>(null);
+  const [company, setCompany] = useState<CompanyItem|null>(null);
   const [loading, setLoading] = useState(true);
-
-  // Chat State
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState("");
   const [queryLoading, setQueryLoading] = useState(false);
-  const [activeCitationDetail, setActiveCitationDetail] = useState<Citation | null>(null);
-  const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
-
+  const [activeCitation, setActiveCitation] = useState<Citation|null>(null);
+  const [copiedIdx, setCopiedIdx] = useState<number|null>(null);
   const chatBottomRef = useRef<HTMLDivElement>(null);
 
-  // Fetch Company Info & Chat History
   useEffect(() => {
     if (!companyId) return;
-
-    const fetchDetails = async () => {
+    (async () => {
       setLoading(true);
       try {
-        const resCompanies = await fetch(`${API_BASE}/api/companies`);
-        if (resCompanies.ok) {
-          const list: CompanyItem[] = await resCompanies.json();
+        const res = await fetch(`${API_BASE}/api/companies`);
+        if (res.ok) {
+          const list: CompanyItem[] = await res.json();
           const found = list.find(c => c.id === companyId);
-          if (found) {
-            setCompany(found);
-            loadChatHistory(found.id);
-          }
+          if (found) { setCompany(found); loadHistory(found.id); }
         }
-      } catch (e) {
-        console.error("Error fetching company details:", e);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchDetails();
+      } catch {}
+      finally { setLoading(false); }
+    })();
   }, [companyId]);
 
-  const loadChatHistory = async (coId: string) => {
+  const loadHistory = async (id: string) => {
     try {
-      const res = await fetch(`${API_BASE}/api/companies/${coId}/history`);
-      if (res.ok) {
-        const historyData = await res.json();
-        const compiledMessages: ChatMessage[] = [];
-        const reversed = [...historyData].reverse();
-        for (const item of reversed) {
-          compiledMessages.push({ role: "user", text: item.question });
-          compiledMessages.push({ 
-            role: "assistant", 
-            text: item.answer,
-            citations: item.citations || [] 
-          });
-        }
-        
-        if (compiledMessages.length === 0) {
-          compiledMessages.push({
-            role: "assistant",
-            text: `DeepScout Intelligence workspace ready! Ask any research question. All answers are grounded directly on vector-indexed source pages.`
-          });
-        }
-        setChatHistory(compiledMessages);
-      }
-    } catch (e) {
-      console.error("Error loading chat history:", e);
-    }
-  };
-
-  useEffect(() => {
-    if (chatBottomRef.current) {
-      chatBottomRef.current.scrollIntoView({ behavior: "smooth" });
-    }
-  }, [chatHistory]);
-
-  const handleSendQuestion = async (userQuestion: string) => {
-    if (!userQuestion.trim() || !companyId || queryLoading) return;
-
-    setChatInput("");
-    setQueryLoading(true);
-    setChatHistory(prev => [...prev, { role: "user", text: userQuestion.trim() }]);
-
-    try {
-      const res = await fetch(`${API_BASE}/api/query`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          company_id: companyId,
-          question: userQuestion.trim()
-        })
-      });
-
+      const res = await fetch(`${API_BASE}/api/companies/${id}/history`);
       if (res.ok) {
         const data = await res.json();
-        setChatHistory(prev => [
-          ...prev, 
-          { 
-            role: "assistant", 
-            text: data.answer, 
-            citations: data.citations || [] 
-          }
-        ]);
-      } else {
-        setChatHistory(prev => [
-          ...prev, 
-          { 
-            role: "assistant", 
-            text: "Error: Query execution failed. Check backend server logs." 
-          }
-        ]);
+        const msgs: ChatMessage[] = [];
+        [...data].reverse().forEach((item: { question: string; answer: string; citations?: Citation[] }) => {
+          msgs.push({ role:"user", text:item.question });
+          msgs.push({ role:"assistant", text:item.answer, citations:item.citations||[] });
+        });
+        if (msgs.length === 0) msgs.push({ role:"assistant", text:"DeepScout workspace ready! Ask any research question — every answer is grounded strictly on indexed evidence." });
+        setChatHistory(msgs);
       }
-    } catch (e) {
-      setChatHistory(prev => [
-        ...prev, 
-        { 
-          role: "assistant", 
-          text: "Connection error. Verify backend server status." 
-        }
-      ]);
-    } finally {
-      setQueryLoading(false);
-    }
+    } catch {}
+  };
+
+  useEffect(() => { chatBottomRef.current?.scrollIntoView({ behavior:"smooth" }); }, [chatHistory]);
+
+  const sendQuestion = async (q: string) => {
+    if (!q.trim()||!companyId||queryLoading) return;
+    setChatInput(""); setQueryLoading(true);
+    setChatHistory(prev => [...prev, { role:"user", text:q.trim() }]);
+    try {
+      const res = await fetch(`${API_BASE}/api/query`, {
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({ company_id:companyId, question:q.trim() })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setChatHistory(prev => [...prev, { role:"assistant", text:data.answer, citations:data.citations||[] }]);
+      } else {
+        setChatHistory(prev => [...prev, { role:"assistant", text:"Query failed. Check backend logs." }]);
+      }
+    } catch {
+      setChatHistory(prev => [...prev, { role:"assistant", text:"Connection error. Verify backend server." }]);
+    } finally { setQueryLoading(false); }
   };
 
   const handleCopy = (text: string, idx: number) => {
-    navigator.clipboard.writeText(text);
-    setCopiedIdx(idx);
+    navigator.clipboard.writeText(text); setCopiedIdx(idx);
     setTimeout(() => setCopiedIdx(null), 2000);
   };
 
-  if (loading) {
-    return (
-      <div className="px-4 md:px-8 max-w-4xl mx-auto py-16 flex justify-center items-center">
-        <div className="card-warm-glass p-8 flex items-center gap-3 text-sm text-[#77736B]">
-          <Loader2 className="w-5 h-5 animate-spin text-[#F4C542]" />
-          <span>Opening DeepScout Workspace...</span>
-        </div>
+  if (loading) return (
+    <div style={{ padding:"60px 16px", maxWidth:960, margin:"0 auto" }}>
+      <div className="ds-card" style={{ padding:36, display:"flex", alignItems:"center", gap:12, justifyContent:"center" }}>
+        <Loader2 size={20} color="#F4C542" style={{ animation:"spin 1s linear infinite" }}/>
+        <span style={{ fontSize:14, color:"#77736B" }}>Opening DeepScout Workspace...</span>
       </div>
-    );
-  }
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    </div>
+  );
 
-  if (!company) {
-    return (
-      <div className="px-4 md:px-8 max-w-4xl mx-auto py-16 text-center">
-        <h2 className="font-editorial text-2xl font-bold mb-2">Company Not Found</h2>
-        <button onClick={() => navigate("/companies")} className="btn-gold-pill">
-          Back to Directory
-        </button>
-      </div>
-    );
-  }
+  if (!company) return (
+    <div style={{ padding:"60px 16px", maxWidth:960, margin:"0 auto", textAlign:"center" }}>
+      <h2 className="font-editorial" style={{ fontSize:28, fontWeight:700, color:"#191817", marginBottom:16 }}>Company Not Found</h2>
+      <button onClick={() => navigate("/companies")} className="btn-gold">Back to Directory</button>
+    </div>
+  );
+
+  const PROMPTS = [
+    `What products and services does ${company.name} offer?`,
+    `What is ${company.name}'s technology stack?`,
+    `What career opportunities exist at ${company.name}?`,
+  ];
 
   return (
-    <div className="px-4 md:px-8 max-w-5xl mx-auto pb-12 relative">
-      <div className="deepscout-world-card p-6 md:p-10 flex flex-col gap-6">
-        
-        {/* Editorial Header */}
-        <div className="flex items-center justify-between pb-6 border-b border-[#E5DFD3]">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-[#F4C542] flex items-center justify-center text-[#191817] shadow-md">
-              <Building2 className="w-6 h-6" />
+    <div style={{ padding:"0 16px 60px", maxWidth:1040, margin:"0 auto" }}>
+      <div className="ds-world" style={{ padding:"32px 36px", display:"flex", flexDirection:"column", gap:24, minHeight:"75vh" }}>
+
+        {/* Header */}
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", paddingBottom:20, borderBottom:"1px solid rgba(229,223,211,0.7)", flexWrap:"wrap", gap:12 }}>
+          <div style={{ display:"flex", alignItems:"center", gap:16 }}>
+            <div style={{ width:52, height:52, borderRadius:18, background:"#F4C542", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:"0 4px 12px rgba(244,197,66,0.35)" }}>
+              <Building2 size={26} color="#191817"/>
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h1 className="font-editorial text-2xl font-bold text-[#191817]">{company.name}</h1>
-                <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold">
-                  ● RESEARCH READY
-                </span>
+              <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:3 }}>
+                <h1 className="font-editorial" style={{ fontSize:24, fontWeight:800, color:"#191817" }}>{company.name}</h1>
+                <span className="ds-badge ds-badge-green">● READY</span>
               </div>
-              <a 
-                href={company.website_url} 
-                target="_blank" 
-                rel="noreferrer" 
-                className="text-xs text-[#7C8460] font-mono hover:underline flex items-center gap-1 mt-0.5"
-              >
-                {company.website_url}
-                <ExternalLink className="w-3 h-3" />
+              <a href={company.website_url} target="_blank" rel="noreferrer"
+                style={{ fontSize:11, color:"#7C8460", fontFamily:"'JetBrains Mono',monospace", display:"flex", alignItems:"center", gap:4, textDecoration:"none" }}>
+                {company.website_url} <ExternalLink size={11}/>
               </a>
             </div>
           </div>
+          <button onClick={() => navigate("/sources")} className="btn-ghost" style={{ fontSize:12, padding:"9px 18px" }}>
+            <Eye size={14}/> View Sources
+          </button>
+        </div>
 
-          <div className="flex items-center gap-2">
-            <button onClick={() => navigate("/sources")} className="btn-gold-pill text-xs py-2 px-3">
-              <FileSearch className="w-3.5 h-3.5" /> View Sources
-            </button>
+        {/* Scope card */}
+        <div className="ds-card" style={{ padding:"18px 22px", display:"flex", alignItems:"center", gap:14 }}>
+          <div style={{ width:38, height:38, borderRadius:12, background:"rgba(124,132,96,0.12)", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+            <BookOpen size={17} color="#7C8460"/>
+          </div>
+          <div>
+            <div className="ds-label" style={{ marginBottom:3 }}>EDITORIAL INTELLIGENCE REPORT</div>
+            <p style={{ fontSize:12, color:"#5C5850", lineHeight:1.6 }}>
+              {company.name} has been vector-indexed using local BGE embeddings (768d) on Neon PostgreSQL pgvector. All answers are grounded strictly against retrieved chunks.
+            </p>
           </div>
         </div>
 
-        {/* Executive Report Summary Card */}
-        <div className="card-warm-glass p-6 flex flex-col gap-3">
-          <span className="text-[10px] font-bold text-[#7C8460] uppercase tracking-wider">
-            EDITORIAL INTELLIGENCE REPORT
-          </span>
-          <p className="text-xs text-[#5C5850] leading-relaxed">
-            {company.name} has been vectorized using local BGE embeddings (768d) and indexed into Neon PostgreSQL pgvector. All answers below are grounded strictly against candidate pages with zero hallucination.
-          </p>
-        </div>
-
-        {/* Q&A Chat Feed Stream */}
-        <div className="flex-1 space-y-6">
+        {/* Chat */}
+        <div style={{ display:"flex", flexDirection:"column", gap:20, flex:1 }}>
           {chatHistory.map((msg, idx) => {
-            const isUser = msg.role === "user";
+            const isU = msg.role === "user";
             return (
-              <div key={idx} className={`flex gap-3 max-w-3xl ${isUser ? "ml-auto flex-row-reverse" : "mr-auto"}`}>
-                <div className={`w-8 h-8 rounded-full shrink-0 flex items-center justify-center text-xs font-bold ${
-                  isUser ? "bg-[#191817] text-white" : "bg-[#F4C542] text-[#191817]"
-                }`}>
-                  {isUser ? "U" : "DS"}
+              <div key={idx} style={{ display:"flex", gap:10, flexDirection:isU?"row-reverse":"row", maxWidth:"85%", marginLeft:isU?"auto":"0", marginRight:isU?"0":"auto" }}>
+                <div style={{ width:34, height:34, borderRadius:"50%", background:isU?"#191817":"#F4C542", display:"flex", alignItems:"center", justifyContent:"center", fontSize:11, fontWeight:700, color:isU?"white":"#191817", flexShrink:0, alignSelf:"flex-end" }}>
+                  {isU ? "U" : "DS"}
                 </div>
-
-                <div className="flex flex-col gap-1.5 max-w-2xl group relative">
-                  <div className={`p-5 rounded-3xl text-xs leading-relaxed ${
-                    isUser 
-                      ? "bg-[#191817] text-white font-medium rounded-tr-none" 
-                      : "card-warm-glass text-[#191817] rounded-tl-none shadow-sm"
-                  }`}>
-                    <div className="whitespace-pre-line">{msg.text}</div>
-
-                    {!isUser && msg.citations && msg.citations.length > 0 && (
-                      <div className="mt-4 pt-3 border-t border-[#E5DFD3] flex flex-wrap gap-1.5 items-center">
-                        <span className="text-[10px] text-[#77736B] font-bold uppercase tracking-wider">
-                          Citations:
-                        </span>
+                <div style={{ display:"flex", flexDirection:"column", gap:6, position:"relative" }}>
+                  <div className={isU ? "ds-msg-user" : "ds-msg-ai"}>
+                    <div style={{ whiteSpace:"pre-line" }}>{msg.text}</div>
+                    {!isU && msg.citations && msg.citations.length > 0 && (
+                      <div style={{ marginTop:14, paddingTop:12, borderTop:"1px solid rgba(229,223,211,0.7)", display:"flex", flexWrap:"wrap", gap:6, alignItems:"center" }}>
+                        <span style={{ fontSize:10, color:"#77736B", fontWeight:700, textTransform:"uppercase", letterSpacing:"0.08em", marginRight:4 }}>EVIDENCE:</span>
                         {msg.citations.map(cit => (
-                          <button
-                            key={cit.index}
-                            onClick={() => setActiveCitationDetail(cit)}
-                            className="text-[11px] bg-white border border-[#E5DFD3] hover:border-[#F4C542] hover:bg-[#FEF3C7] px-2.5 py-1 rounded-full flex items-center gap-1 transition-all text-[#191817] font-semibold"
-                          >
-                            <span className="text-[10px] font-mono text-[#7C8460] font-bold">[{cit.index}]</span>
-                            <span className="max-w-[130px] truncate">{cit.title}</span>
+                          <button key={cit.index} onClick={() => setActiveCitation(cit)} className="ds-citation">
+                            <span className="font-code" style={{ fontSize:10, color:"#7C8460", fontWeight:700 }}>[{cit.index}]</span>
+                            <span style={{ maxWidth:130, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{cit.title}</span>
                           </button>
                         ))}
                       </div>
                     )}
                   </div>
-
-                  {!isUser && (
-                    <button
-                      onClick={() => handleCopy(msg.text, idx)}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity absolute top-2 right-2 text-[#77736B] hover:text-[#191817] p-1 rounded-full bg-white border border-[#E5DFD3]"
-                      title="Copy response"
-                    >
-                      {copiedIdx === idx ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                  {!isU && (
+                    <button onClick={() => handleCopy(msg.text, idx)}
+                      style={{ position:"absolute", top:8, right:8, padding:5, borderRadius:9999, border:"1px solid rgba(229,223,211,0.8)", background:"rgba(255,255,255,0.9)", cursor:"pointer", display:"flex", opacity:0.6, transition:"opacity 0.2s" }}
+                      onMouseEnter={e=>(e.currentTarget.style.opacity="1")} onMouseLeave={e=>(e.currentTarget.style.opacity="0.6")}>
+                      {copiedIdx===idx ? <Check size={13} color="#065F46"/> : <Copy size={13} color="#77736B"/>}
                     </button>
                   )}
                 </div>
               </div>
             );
           })}
-
           {queryLoading && (
-            <div className="flex gap-3 mr-auto max-w-3xl">
-              <div className="w-8 h-8 rounded-full bg-[#F4C542] flex items-center justify-center text-[#191817]">
-                <Loader2 className="w-4 h-4 animate-spin" />
+            <div style={{ display:"flex", gap:10, maxWidth:"85%" }}>
+              <div style={{ width:34, height:34, borderRadius:"50%", background:"#F4C542", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, alignSelf:"flex-end" }}>
+                <Loader2 size={15} color="#191817" style={{ animation:"spin 1s linear infinite" }}/>
               </div>
-              <div className="card-warm-glass p-4 rounded-3xl text-xs text-[#5C5850] flex items-center gap-3">
-                <Loader2 className="w-4 h-4 animate-spin text-[#7C8460]" />
-                <span>Executing pgvector hybrid search & Gemini grounded synthesis...</span>
+              <div className="ds-msg-ai" style={{ display:"flex", alignItems:"center", gap:10 }}>
+                <Loader2 size={14} color="#7C8460" style={{ animation:"spin 1s linear infinite", flexShrink:0 }}/>
+                <span style={{ fontSize:12, color:"#5C5850" }}>Executing hybrid retrieval + Gemini grounded synthesis...</span>
               </div>
             </div>
           )}
-
-          <div ref={chatBottomRef} />
+          <div ref={chatBottomRef}/>
         </div>
 
-        {/* Input Question Bar & Suggestions */}
-        <div className="pt-4 border-t border-[#E5DFD3]">
-          <div className="flex flex-col gap-3">
-            
-            <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs">
-              <span className="text-[10px] text-[#77736B] font-bold uppercase tracking-wider shrink-0">
-                PROMPTS:
-              </span>
-              {[
-                `What products and services does ${company.name} offer?`,
-                `What technology stack & cloud infrastructure do they use?`,
-                `What are key career opportunities and hiring demands?`
-              ].map((pillText, pIdx) => (
-                <button
-                  key={pIdx}
-                  onClick={() => handleSendQuestion(pillText)}
-                  className="px-3 py-1 rounded-full bg-white hover:bg-[#FEF3C7] text-[#191817] border border-[#E5DFD3] shrink-0 text-[11px] font-semibold transition-colors"
-                >
-                  {pillText}
-                </button>
-              ))}
-            </div>
-
-            <form onSubmit={(e) => { e.preventDefault(); handleSendQuestion(chatInput); }} className="relative flex items-center">
-              <input
-                type="text"
-                value={chatInput}
-                onChange={(e) => setChatInput(e.target.value)}
-                placeholder={`Ask any research question about ${company.name}...`}
-                disabled={queryLoading}
-                className="input-warm pr-14 py-3.5 text-xs shadow-sm"
-              />
-              <button
-                type="submit"
-                disabled={!chatInput.trim() || queryLoading}
-                className="btn-gold-icon absolute right-2"
-              >
-                <Send className="w-4 h-4" />
+        {/* Input */}
+        <div style={{ paddingTop:16, borderTop:"1px solid rgba(229,223,211,0.7)", display:"flex", flexDirection:"column", gap:12 }}>
+          <div style={{ display:"flex", gap:6, overflowX:"auto", paddingBottom:2 }}>
+            <span style={{ fontSize:10, fontWeight:700, color:"#77736B", textTransform:"uppercase", letterSpacing:"0.08em", flexShrink:0, alignSelf:"center" }}>PROMPTS:</span>
+            {PROMPTS.map((p,i) => (
+              <button key={i} onClick={() => sendQuestion(p)} disabled={queryLoading}
+                style={{ fontSize:11, padding:"7px 14px", borderRadius:9999, border:"1px solid rgba(229,223,211,0.8)", background:"rgba(255,255,255,0.75)", color:"#191817", fontWeight:600, cursor:"pointer", flexShrink:0, transition:"all 0.2s", whiteSpace:"nowrap" }}
+                onMouseEnter={e=>{e.currentTarget.style.background="#FEF3C7";e.currentTarget.style.borderColor="#F4C542";}}
+                onMouseLeave={e=>{e.currentTarget.style.background="rgba(255,255,255,0.75)";e.currentTarget.style.borderColor="rgba(229,223,211,0.8)";}}>
+                {p}
               </button>
-            </form>
-
+            ))}
           </div>
+          <form onSubmit={e=>{e.preventDefault();sendQuestion(chatInput);}} style={{ display:"flex", gap:10, alignItems:"center" }}>
+            <input type="text" value={chatInput} onChange={e=>setChatInput(e.target.value)}
+              placeholder={`Ask any research question about ${company.name}...`} disabled={queryLoading}
+              className="ds-input" style={{ paddingRight:14 }}/>
+            <button type="submit" disabled={!chatInput.trim()||queryLoading} className="btn-icon">
+              <Send size={17}/>
+            </button>
+          </form>
         </div>
-
       </div>
 
-      {/* EVIDENCE DRAWER MODAL */}
-      {activeCitationDetail && (
-        <div className="fixed inset-0 bg-[#191817]/30 backdrop-blur-sm z-50 flex justify-end">
-          <div className="w-full max-w-md bg-[#FAF6EE] h-full p-8 overflow-y-auto flex flex-col gap-6 shadow-2xl border-l border-white animate-in slide-in-from-right duration-200">
-            
-            <div className="flex items-center justify-between border-b border-[#E5DFD3] pb-4">
-              <div className="flex items-center gap-2 font-editorial text-lg font-bold text-[#191817]">
-                <FileText className="w-5 h-5 text-[#7C8460]" />
-                Evidence Dossier
+      {/* Evidence Drawer */}
+      {activeCitation && (
+        <div className="ds-drawer-bg" onClick={e=>{if(e.target===e.currentTarget) setActiveCitation(null);}}>
+          <div className="ds-drawer">
+            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", paddingBottom:16, borderBottom:"1px solid rgba(229,223,211,0.7)" }}>
+              <div className="font-editorial" style={{ fontSize:18, fontWeight:700, color:"#191817", display:"flex", alignItems:"center", gap:8 }}>
+                <FileText size={18} color="#7C8460"/> Evidence Dossier
               </div>
-              <button onClick={() => setActiveCitationDetail(null)} className="p-1 rounded-full hover:bg-white text-[#77736B]">
-                <X className="w-5 h-5" />
+              <button onClick={() => setActiveCitation(null)} style={{ padding:6, border:"none", background:"rgba(229,223,211,0.4)", borderRadius:9999, cursor:"pointer", display:"flex" }}>
+                <X size={16} color="#77736B"/>
               </button>
             </div>
-
-            <div className="flex items-center gap-2">
-              <span className="px-2.5 py-0.5 rounded-full bg-[#FEF3C7] text-[#92400E] font-bold text-xs font-mono">
-                Citation [{activeCitationDetail.index}]
-              </span>
-              <span className={`badge-warm ${activeCitationDetail.source_type}`}>
-                {activeCitationDetail.source_type}
-              </span>
+            <div style={{ display:"flex", gap:8 }}>
+              <span className="ds-badge ds-badge-gold font-code">Citation [{activeCitation.index}]</span>
+              <span className={`ds-badge ds-badge-${activeCitation.source_type}`}>{activeCitation.source_type}</span>
             </div>
-
             <div>
-              <span className="text-[10px] text-[#77736B] font-bold uppercase tracking-wider block mb-1">
-                Document Title
-              </span>
-              <h4 className="font-editorial text-base font-bold text-[#191817]">
-                {activeCitationDetail.title}
-              </h4>
+              <div className="ds-label" style={{ marginBottom:6 }}>Document Title</div>
+              <h4 className="font-editorial" style={{ fontSize:16, fontWeight:700, color:"#191817" }}>{activeCitation.title}</h4>
             </div>
-
             <div>
-              <span className="text-[10px] text-[#77736B] font-bold uppercase tracking-wider block mb-1">
-                Section Header
-              </span>
-              <div className="text-xs text-[#191817] font-mono bg-white border border-[#E5DFD3] p-3 rounded-2xl">
-                {activeCitationDetail.section_header || "# Overview"}
+              <div className="ds-label" style={{ marginBottom:6 }}>Section Header</div>
+              <div className="font-code" style={{ fontSize:12, color:"#191817", background:"rgba(255,255,255,0.7)", border:"1px solid rgba(229,223,211,0.7)", padding:"12px 16px", borderRadius:14 }}>
+                {activeCitation.section_header || "# Overview"}
               </div>
             </div>
-
+            {activeCitation.snippet && (
+              <div>
+                <div className="ds-label" style={{ marginBottom:6 }}>Extracted Evidence</div>
+                <p style={{ fontSize:12, color:"#5C5850", background:"rgba(255,255,255,0.7)", border:"1px solid rgba(229,223,211,0.7)", padding:"14px 18px", borderRadius:14, lineHeight:1.75, fontStyle:"italic" }}>
+                  "{activeCitation.snippet}"
+                </p>
+              </div>
+            )}
+            {activeCitation.relevance_score !== undefined && (
+              <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                <div className="ds-label">RELEVANCE</div>
+                <div style={{ flex:1, height:6, background:"rgba(229,223,211,0.5)", borderRadius:9999, overflow:"hidden" }}>
+                  <div style={{ height:"100%", width:`${activeCitation.relevance_score*100}%`, background:"linear-gradient(90deg,#F4C542,#E9B82E)", borderRadius:9999 }}/>
+                </div>
+                <span className="font-code" style={{ fontSize:12, fontWeight:700, color:"#191817" }}>
+                  {activeCitation.relevance_score.toFixed(2)}
+                </span>
+              </div>
+            )}
             <div>
-              <span className="text-[10px] text-[#77736B] font-bold uppercase tracking-wider block mb-1">
-                Extracted Quoted Evidence
-              </span>
-              <p className="text-xs text-[#5C5850] bg-white border border-[#E5DFD3] p-4 rounded-2xl leading-relaxed italic">
-                "{activeCitationDetail.snippet || "Extracted content block verified against pgvector candidate embeddings."}"
-              </p>
-            </div>
-
-            <div>
-              <span className="text-[10px] text-[#77736B] font-bold uppercase tracking-wider block mb-1">
-                Source Link
-              </span>
-              <a 
-                href={activeCitationDetail.url} 
-                target="_blank" 
-                rel="noreferrer"
-                className="text-xs text-[#7C8460] font-mono hover:underline truncate flex items-center gap-1"
-              >
-                <span className="truncate">{activeCitationDetail.url}</span>
-                <ExternalLink className="w-3.5 h-3.5 shrink-0" />
+              <div className="ds-label" style={{ marginBottom:6 }}>Source Link</div>
+              <a href={activeCitation.url} target="_blank" rel="noreferrer"
+                style={{ fontSize:12, color:"#7C8460", fontFamily:"'JetBrains Mono',monospace", display:"flex", alignItems:"center", gap:5, textDecoration:"none", wordBreak:"break-all" }}>
+                {activeCitation.url} <ExternalLink size={13} style={{ flexShrink:0 }}/>
               </a>
             </div>
-
-            <div className="bg-[#D1FAE5] text-[#065F46] p-4 rounded-2xl text-xs flex items-start gap-2.5 mt-auto">
-              <ShieldCheck className="w-5 h-5 shrink-0 mt-0.5" />
-              <div>
-                <span className="font-bold block">Grounded Vector Match</span>
-                Verified directly from PostgreSQL candidate chunks.
+            <div style={{ marginTop:"auto", background:"rgba(209,250,229,0.6)", border:"1px solid rgba(6,95,70,0.15)", borderRadius:16, padding:"14px 18px", display:"flex", gap:10 }}>
+              <ShieldCheck size={18} color="#065F46" style={{ flexShrink:0, marginTop:1 }}/>
+              <div style={{ fontSize:12, color:"#065F46" }}>
+                <strong style={{ display:"block", marginBottom:2 }}>Grounded Vector Match</strong>
+                Verified directly from PostgreSQL pgvector candidate chunks.
               </div>
             </div>
-
           </div>
         </div>
       )}
-
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }
 
-// ----------------------------------------------------
-// 5. COMPANY DIRECTORY PAGE (`/companies`)
-// ----------------------------------------------------
+/* ── COMPANIES DIRECTORY PAGE ── */
 function DirectoryPage() {
   const navigate = useNavigate();
   const [companies, setCompanies] = useState<CompanyItem[]>([]);
@@ -845,248 +870,240 @@ function DirectoryPage() {
   const [search, setSearch] = useState("");
 
   useEffect(() => {
-    const fetchList = async () => {
+    (async () => {
       try {
         const res = await fetch(`${API_BASE}/api/companies`);
-        if (res.ok) {
-          const data = await res.json();
-          setCompanies(data);
-        }
-      } catch (e) {
-        console.error("Error fetching companies:", e);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchList();
+        if (res.ok) setCompanies(await res.json());
+      } catch {}
+      finally { setLoading(false); }
+    })();
   }, []);
 
-  const filtered = companies.filter(c => 
+  const filtered = companies.filter(c =>
     c.name.toLowerCase().includes(search.toLowerCase()) ||
     c.website_url.toLowerCase().includes(search.toLowerCase())
   );
 
   return (
-    <div className="px-4 md:px-8 max-w-6xl mx-auto pb-12">
-      <div className="deepscout-world-card p-8 md:p-12 flex flex-col gap-6">
-        
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[#E5DFD3] pb-6">
+    <div style={{ padding:"0 16px 60px", maxWidth:1300, margin:"0 auto" }}>
+      <div className="ds-world" style={{ padding:"40px" }}>
+        <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", marginBottom:28, gap:20, flexWrap:"wrap" }}>
           <div>
-            <h1 className="font-editorial text-3xl font-bold text-[#191817]">
+            <div className="ds-label" style={{ marginBottom:8 }}>Research Directory</div>
+            <h1 className="font-editorial" style={{ fontSize:"clamp(24px,3.5vw,40px)", fontWeight:800, color:"#191817" }}>
               Your Researched Companies
             </h1>
-            <p className="text-xs text-[#77736B] mt-1">
-              Explore every company investigated with DeepScout
-            </p>
+            <p style={{ fontSize:13, color:"#77736B", marginTop:6 }}>Every company investigated with DeepScout.</p>
           </div>
-
-          <button onClick={() => navigate("/research")} className="btn-gold-pill">
-            <span>+ New Research Target</span>
+          <button onClick={() => navigate("/research")} className="btn-gold">
+            + New Research <ArrowUpRight size={15}/>
           </button>
         </div>
 
-        {/* Filter Search */}
-        <div className="relative max-w-md">
-          <Search className="w-4 h-4 text-[#77736B] absolute left-4 top-3.5" />
-          <input 
-            type="text" 
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Filter companies..."
-            className="input-warm pl-10 py-2.5 text-xs"
-          />
+        <div style={{ maxWidth:400, marginBottom:24, position:"relative" }}>
+          <Search size={15} color="#77736B" style={{ position:"absolute", left:16, top:"50%", transform:"translateY(-50%)", pointerEvents:"none" }}/>
+          <input type="text" value={search} onChange={e => setSearch(e.target.value)}
+            placeholder="Filter by company or domain..." className="ds-input" style={{ paddingLeft:42, paddingTop:11, paddingBottom:11 }}/>
         </div>
 
-        {/* Cards Grid */}
         {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="h-40 skeleton-warm rounded-3xl" />
-            <div className="h-40 skeleton-warm rounded-3xl" />
-            <div className="h-40 skeleton-warm rounded-3xl" />
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))", gap:20 }}>
+            {[1,2,3].map(i => <div key={i} className="ds-skeleton" style={{ height:180 }}/>)}
           </div>
         ) : filtered.length === 0 ? (
-          <div className="text-center py-12 text-xs text-[#77736B] bg-white/50 rounded-3xl border border-[#E5DFD3]">
-            No companies found. Start a new research target!
+          <div style={{ textAlign:"center", padding:"60px 20px", background:"rgba(255,255,255,0.45)", borderRadius:24, border:"1px solid rgba(229,223,211,0.5)" }}>
+            <Star size={32} color="#E5DFD3" style={{ margin:"0 auto 12px" }}/>
+            <div style={{ fontSize:15, fontWeight:600, color:"#77736B" }}>No companies yet</div>
+            <p style={{ fontSize:13, color:"#9E988D", marginTop:6, marginBottom:20 }}>Start a research target to build your first workspace.</p>
+            <button onClick={() => navigate("/research")} className="btn-gold">Start Research <ArrowUpRight size={14}/></button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))", gap:20 }}>
             {filtered.map(c => (
-              <div 
-                key={c.id} 
-                onClick={() => navigate(`/research/${c.id}`)}
-                className="card-warm-glass card-warm-glass-hover p-6 flex flex-col justify-between cursor-pointer group"
-              >
-                <div>
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-[10px] font-bold bg-emerald-100 text-emerald-800 px-2.5 py-0.5 rounded-full">
-                      ● RESEARCH READY
-                    </span>
-                    <span className="text-[11px] font-mono text-[#77736B]">42 sources</span>
-                  </div>
-
-                  <h3 className="font-editorial text-lg font-bold text-[#191817] group-hover:text-[#7C8460] transition-colors mb-1">
-                    {c.name}
-                  </h3>
-
-                  <p className="text-xs font-mono text-[#77736B] truncate mb-6">
-                    {c.website_url}
-                  </p>
+              <div key={c.id} className="ds-card ds-card-hover" style={{ padding:"24px", cursor:"pointer", display:"flex", flexDirection:"column", gap:14 }}
+                onClick={() => navigate(`/research/${c.id}`)}>
+                <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+                  <span className="ds-badge ds-badge-green">● READY</span>
+                  <Clock size={13} color="#9E988D"/>
                 </div>
-
-                <div className="pt-4 border-t border-[#E5DFD3] flex items-center justify-between text-xs font-bold text-[#191817]">
-                  <span>OPEN RESEARCH WORKSPACE</span>
-                  <ArrowUpRight className="w-4 h-4 text-[#7C8460] group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+                <div>
+                  <h3 className="font-editorial" style={{ fontSize:17, fontWeight:700, color:"#191817", lineHeight:1.3, marginBottom:4 }}>{c.name}</h3>
+                  <p className="font-code" style={{ fontSize:11, color:"#77736B", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{c.website_url}</p>
+                </div>
+                <div style={{ marginTop:"auto", paddingTop:14, borderTop:"1px solid rgba(229,223,211,0.7)", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+                  <span style={{ fontSize:11, fontWeight:700, color:"#191817" }}>OPEN WORKSPACE</span>
+                  <ArrowUpRight size={16} color="#7C8460"/>
                 </div>
               </div>
             ))}
           </div>
         )}
-
       </div>
     </div>
   );
 }
 
-// ----------------------------------------------------
-// 6. SOURCES PAGE (`/sources`)
-// ----------------------------------------------------
+/* ── SOURCES PAGE ── */
 function SourcesPage() {
   const [filter, setFilter] = useState("all");
+  const [companies, setCompanies] = useState<CompanyItem[]>([]);
+  useEffect(() => {
+    fetch(`${API_BASE}/api/companies`).then(r=>r.ok?r.json():[]).then(d=>{if(Array.isArray(d))setCompanies(d);}).catch(()=>{});
+  }, []);
 
-  const sources = [
-    { title: "Core Services & Solutions Portfolio", type: "services", score: "0.89", chunk: "chk_9a12b", url: "https://tcs.com/services" },
-    { title: "Careers & Engineering Hiring Demands", type: "careers", score: "0.84", chunk: "chk_4f81c", url: "https://tcs.com/careers" },
-    { title: "Financial Brief & Investor Overview", type: "investors", score: "0.78", chunk: "chk_3d11e", url: "https://tcs.com/investors" },
-    { title: "Press Releases & Enterprise News", type: "news", score: "0.74", chunk: "chk_7b29a", url: "https://tcs.com/news" },
-    { title: "Company Profile & Executive Overview", type: "about", score: "0.71", chunk: "chk_1e40c", url: "https://tcs.com/about" },
+  const SOURCES = [
+    { title:"Core Services & Solutions Portfolio",  type:"services",  score:0.89, chunk:"chk_9a12b", company:"TCS" },
+    { title:"Engineering Careers & Hiring",         type:"careers",   score:0.84, chunk:"chk_4f81c", company:"TCS" },
+    { title:"Financial Brief & Investor Overview",  type:"investors", score:0.78, chunk:"chk_3d11e", company:"TCS" },
+    { title:"Press Releases & Enterprise News",     type:"news",      score:0.74, chunk:"chk_7b29a", company:"TCS" },
+    { title:"Company Profile & Executive Overview", type:"about",     score:0.71, chunk:"chk_1e40c", company:"TCS" },
+    { title:"Global Delivery Centers Network",      type:"services",  score:0.68, chunk:"chk_2e99d", company:"TCS" },
   ];
-
-  const filtered = sources.filter(s => filter === "all" || s.type === filter);
+  const filtered = SOURCES.filter(s => filter==="all" || s.type===filter);
 
   return (
-    <div className="px-4 md:px-8 max-w-6xl mx-auto pb-12">
-      <div className="deepscout-world-card p-8 md:p-12 flex flex-col gap-6">
-        
-        <div>
-          <h1 className="font-editorial text-3xl font-bold text-[#191817]">The Evidence</h1>
-          <p className="text-xs text-[#77736B] mt-1">Every grounded answer starts with a verified source page</p>
+    <div style={{ padding:"0 16px 60px", maxWidth:1300, margin:"0 auto" }}>
+      <div className="ds-world" style={{ padding:"40px" }}>
+        <div style={{ marginBottom:28 }}>
+          <div className="ds-label" style={{ marginBottom:8 }}>Evidence Archive</div>
+          <h1 className="font-editorial" style={{ fontSize:"clamp(24px,3.5vw,40px)", fontWeight:800, color:"#191817" }}>The Evidence</h1>
+          <p style={{ fontSize:13, color:"#77736B", marginTop:6 }}>Every grounded answer starts with a verified source page.</p>
         </div>
-
-        {/* Category Pills */}
-        <div className="flex gap-2 text-xs overflow-x-auto pb-2">
-          {["all", "services", "careers", "investors", "news", "about"].map(cat => (
-            <button
-              key={cat}
-              onClick={() => setFilter(cat)}
-              className={`px-4 py-1.5 rounded-full capitalize font-semibold transition-all ${
-                filter === cat 
-                  ? "bg-[#F4C542] text-[#191817] font-bold shadow-sm" 
-                  : "bg-white text-[#77736B] hover:bg-white/80"
-              }`}
-            >
+        <div style={{ display:"flex", gap:8, marginBottom:24, flexWrap:"wrap" }}>
+          {["all","services","careers","investors","news","about"].map(cat => (
+            <button key={cat} onClick={() => setFilter(cat)}
+              style={{ fontSize:12, padding:"7px 18px", borderRadius:9999, border:"1px solid transparent", fontWeight:600, cursor:"pointer", transition:"all 0.2s",
+                background:filter===cat?"#F4C542":"rgba(255,255,255,0.7)",
+                borderColor:filter===cat?"#E9B82E":"rgba(229,223,211,0.7)",
+                color:filter===cat?"#191817":"#77736B",
+                boxShadow:filter===cat?"0 2px 8px rgba(244,197,66,0.30)":"none",
+                textTransform:"capitalize" }}>
               {cat}
             </button>
           ))}
         </div>
-
-        {/* Source Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(320px,1fr))", gap:18 }}>
           {filtered.map((item, i) => (
-            <div key={i} className="card-warm-glass p-6 flex flex-col justify-between">
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <span className={`badge-warm ${item.type}`}>{item.type}</span>
-                  <span className="text-[11px] font-mono text-[#7C8460]">Vector Relevance: {item.score}</span>
-                </div>
-
-                <h4 className="font-editorial text-base font-bold text-[#191817] mb-2">{item.title}</h4>
-                <p className="text-xs font-mono text-[#77736B] truncate mb-4">{item.url}</p>
+            <div key={i} className="ds-card" style={{ padding:"24px", display:"flex", flexDirection:"column", gap:12 }}>
+              <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+                <span className={`ds-badge ds-badge-${item.type}`}>{item.type}</span>
+                <span className="font-code" style={{ fontSize:11, color:"#7C8460", fontWeight:600 }}>{(item.score*100).toFixed(0)}% match</span>
               </div>
-
-              <div className="pt-3 border-t border-[#E5DFD3] flex items-center justify-between text-xs text-[#7C8460] font-bold">
-                <span>Chunk ID: {item.chunk}</span>
-                <span className="flex items-center gap-1 cursor-pointer hover:underline">
-                  Inspect Evidence <ArrowUpRight className="w-3.5 h-3.5" />
-                </span>
+              <h4 className="font-editorial" style={{ fontSize:16, fontWeight:700, color:"#191817", lineHeight:1.3 }}>{item.title}</h4>
+              <p className="font-code" style={{ fontSize:10, color:"#77736B" }}>Company: {item.company}</p>
+              <div style={{ paddingTop:12, borderTop:"1px solid rgba(229,223,211,0.7)", display:"flex", alignItems:"center", justifyContent:"space-between", fontSize:11, color:"#7C8460", fontWeight:600 }}>
+                <span className="font-code">Chunk: {item.chunk}</span>
+                <span style={{ display:"flex", alignItems:"center", gap:4, cursor:"pointer" }}>Inspect <ArrowUpRight size={13}/></span>
               </div>
             </div>
           ))}
         </div>
-
+        {companies.length > 0 && (
+          <div style={{ marginTop:32, paddingTop:28, borderTop:"1px solid rgba(229,223,211,0.7)" }}>
+            <div className="ds-label" style={{ marginBottom:12 }}>Researched Companies</div>
+            <div style={{ display:"flex", gap:10, flexWrap:"wrap" }}>
+              {companies.map(c => (
+                <span key={c.id} className="ds-badge ds-badge-olive" style={{ padding:"6px 14px", fontSize:12 }}>{c.name}</span>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
-// ----------------------------------------------------
-// 7. HISTORY PAGE (`/history`)
-// ----------------------------------------------------
+/* ── HISTORY PAGE ── */
 function HistoryPage() {
+  const navigate = useNavigate();
+  const [history, setHistory] = useState<{ company: CompanyItem; items: { question: string; answer: string; citations: Citation[]; created_at: string }[] }[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/companies`);
+        if (!res.ok) return;
+        const companies: CompanyItem[] = await res.json();
+        const all = await Promise.all(companies.map(async c => {
+          try {
+            const r = await fetch(`${API_BASE}/api/companies/${c.id}/history`);
+            const items = r.ok ? await r.json() : [];
+            return { company:c, items };
+          } catch { return { company:c, items:[] }; }
+        }));
+        setHistory(all.filter(h => h.items.length > 0));
+      } catch {}
+      finally { setLoading(false); }
+    })();
+  }, []);
+
   return (
-    <div className="px-4 md:px-8 max-w-4xl mx-auto pb-12">
-      <div className="deepscout-world-card p-8 md:p-12 flex flex-col gap-6">
-        
-        <div>
-          <h1 className="font-editorial text-3xl font-bold text-[#191817]">Your Research Journey</h1>
-          <p className="text-xs text-[#77736B] mt-1">Audit log of questions asked and grounded evidence retrieved</p>
+    <div style={{ padding:"0 16px 60px", maxWidth:920, margin:"0 auto" }}>
+      <div className="ds-world" style={{ padding:"40px" }}>
+        <div style={{ marginBottom:28 }}>
+          <div className="ds-label" style={{ marginBottom:8 }}>Research Audit</div>
+          <h1 className="font-editorial" style={{ fontSize:"clamp(24px,3.5vw,40px)", fontWeight:800, color:"#191817" }}>Your Research Journey</h1>
+          <p style={{ fontSize:13, color:"#77736B", marginTop:6 }}>Audit log of questions asked and grounded evidence retrieved.</p>
         </div>
 
-        <div className="space-y-6 pt-4">
-          <div className="flex flex-col gap-3">
-            <span className="text-xs font-bold text-[#7C8460] uppercase tracking-wider">
-              ● TODAY
-            </span>
-
-            <div className="card-warm-glass p-6 flex items-center justify-between">
-              <div>
-                <h4 className="font-editorial text-base font-bold text-[#191817]">
-                  What services does TCS provide?
-                </h4>
-                <p className="text-xs text-[#77736B] mt-1 font-mono">
-                  Tata Consultancy Services · Grounded response generated with 7 citations
-                </p>
-              </div>
-              <span className="px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 font-bold text-xs">
-                Verified
-              </span>
-            </div>
+        {loading ? (
+          <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
+            {[1,2,3].map(i => <div key={i} className="ds-skeleton" style={{ height:80 }}/>)}
           </div>
-
-          <div className="flex flex-col gap-3 pt-4 border-t border-[#E5DFD3]">
-            <span className="text-xs font-bold text-[#7C8460] uppercase tracking-wider">
-              ● RECENT
-            </span>
-
-            <div className="card-warm-glass p-6 flex items-center justify-between">
-              <div>
-                <h4 className="font-editorial text-base font-bold text-[#191817]">
-                  What cloud frameworks and tech stack do they use?
-                </h4>
-                <p className="text-xs text-[#77736B] mt-1 font-mono">
-                  Tata Consultancy Services · Grounded response generated with 5 citations
-                </p>
-              </div>
-              <span className="px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 font-bold text-xs">
-                Verified
-              </span>
-            </div>
+        ) : history.length === 0 ? (
+          <div style={{ textAlign:"center", padding:"60px 20px", background:"rgba(255,255,255,0.45)", borderRadius:24, border:"1px solid rgba(229,223,211,0.5)" }}>
+            <Clock size={32} color="#E5DFD3" style={{ margin:"0 auto 12px" }}/>
+            <div style={{ fontSize:15, fontWeight:600, color:"#77736B" }}>No research history yet</div>
+            <p style={{ fontSize:13, color:"#9E988D", marginTop:6, marginBottom:20 }}>Start a research session to build your history.</p>
+            <button onClick={() => navigate("/research")} className="btn-gold">Start Research <ArrowUpRight size={14}/></button>
           </div>
-        </div>
-
+        ) : (
+          <div style={{ display:"flex", flexDirection:"column", gap:28 }}>
+            {history.map(h => (
+              <div key={h.company.id}>
+                <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:12 }}>
+                  <span style={{ fontSize:10, fontWeight:800, color:"#F4C542", textTransform:"uppercase", letterSpacing:"0.1em" }}>● {h.company.name.toUpperCase()}</span>
+                  <div className="ds-divider" style={{ flex:1 }}/>
+                  <button onClick={() => navigate(`/research/${h.company.id}`)}
+                    style={{ fontSize:11, fontWeight:600, color:"#7C8460", border:"none", background:"none", cursor:"pointer", display:"flex", alignItems:"center", gap:4 }}>
+                    Open <ArrowUpRight size={12}/>
+                  </button>
+                </div>
+                <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+                  {[...h.items].reverse().slice(0, 6).map((item, idx) => (
+                    <div key={idx} className="ds-card" style={{ padding:"18px 22px", display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:16, cursor:"pointer" }}
+                      onClick={() => navigate(`/research/${h.company.id}`)}>
+                      <div style={{ flex:1 }}>
+                        <h4 className="font-editorial" style={{ fontSize:14, fontWeight:700, color:"#191817", marginBottom:4 }}>{item.question}</h4>
+                        <p style={{ fontSize:12, color:"#77736B", lineHeight:1.6, overflow:"hidden", textOverflow:"ellipsis", display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical" as const }}>
+                          {item.answer.slice(0, 180)}{item.answer.length > 180 ? "..." : ""}
+                        </p>
+                      </div>
+                      <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:4, flexShrink:0 }}>
+                        <span className="ds-badge ds-badge-green">Verified</span>
+                        {item.citations?.length > 0 && (
+                          <span style={{ fontSize:10, color:"#77736B" }}>{item.citations.length} citations</span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
-// ----------------------------------------------------
-// 8. MAIN ROOT COMPONENT WITH CLIENT-SIDE ROUTING
-// ----------------------------------------------------
+/* ── ROOT APP ── */
 export default function App() {
   return (
     <BrowserRouter>
-      <div className="min-h-screen text-[#191817] font-sans-body paper-texture selection:bg-[#F4C542] selection:text-[#191817] relative">
+      <div style={{ minHeight:"100vh", fontFamily:"'Manrope',system-ui,sans-serif", color:"#191817" }}>
         <GlobalNavbar />
-        
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/research" element={<ResearchPage />} />

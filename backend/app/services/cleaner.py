@@ -33,6 +33,9 @@ class ContentCleaner:
         
         # 6. Inline link navigation blocks (e.g., "[Home](/home) | [About](/about) | [Services](/services)")
         self.nav_separator_pattern = re.compile(r"\[.*?\]\(.*?\)\s*[|•·*•-]\s*\[.*?\]\(.*?\)")
+        
+        # 7. Skip to main content navigation links
+        self.skip_link_pattern = re.compile(r"^\[skip to (?:main )?content\]\(.*?\)$", re.IGNORECASE)
 
     def clean_markdown(self, markdown_content: str) -> str:
         """
@@ -54,6 +57,10 @@ class ContentCleaner:
             
             if not line_stripped:
                 cleaned_lines.append("")
+                continue
+
+            # Strip skip-to-content links
+            if self.skip_link_pattern.match(line_stripped):
                 continue
 
             # Identify if this is a heading

@@ -29,7 +29,8 @@ class CrawlerService:
             "maxDepth": 2,           # Traverse root + 1 level deep links
             "allowBackwardLinks": False,
             "scrapeOptions": {
-                "formats": ["markdown"]  # Get clean markdown content directly
+                "formats": ["markdown"],  # Get clean markdown content directly
+                "onlyMainContent": False
             }
         }
         

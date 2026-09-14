@@ -16,11 +16,11 @@ class LLMService:
         elif self.provider == "openai" and not settings.OPENAI_API_KEY:
             raise ValueError("OPENAI_API_KEY is required for OpenAI LLM generation.")
 
-    async def _post_with_retry(self, client: httpx.AsyncClient, url: str, json_data: dict, headers: dict = None, max_retries: int = 5) -> dict:
+    async def _post_with_retry(self, client: httpx.AsyncClient, url: str, json_data: dict, headers: dict = None, max_retries: int = 7) -> dict:
         """
         Executes a POST request with exponential backoff retries for rate limits (429) and server errors (5xx).
         """
-        backoff = 1.0
+        backoff = 2.0
         for attempt in range(max_retries):
             try:
                 response = await client.post(url, json=json_data, headers=headers, timeout=30.0)
@@ -40,7 +40,7 @@ class LLMService:
                 logger.warning(f"Network connection error during LLM call: {e}. Retrying in {backoff}s... (Attempt {attempt + 1}/{max_retries})")
                 
             await asyncio.sleep(backoff)
-            backoff *= 2.0
+            backoff = min(backoff * 2.0, 30.0)
             
         raise RuntimeError(f"LLM API call failed after {max_retries} attempts.")
 
@@ -80,12 +80,19 @@ class LLMService:
                 url = ctx.get("source_url")
                 if url and url not in seen_urls:
                     seen_urls.add(url)
+                    # Include snippet (content excerpt) and relevance_score (rrf_score)
+                    # so the frontend Evidence Drawer can display both fields
+                    raw_content = ctx.get("content", "")
+                    snippet = raw_content[:300].strip() if raw_content else ""
+                    rrf_score = ctx.get("rrf_score")
                     citations.append({
                         "index": idx,
                         "url": url,
                         "title": ctx.get("source_title", "Unknown Page"),
                         "source_type": ctx.get("source_type", "general"),
-                        "section_header": ctx.get("section_header", "General")
+                        "section_header": ctx.get("section_header", "General"),
+                        "snippet": snippet,
+                        "relevance_score": round(rrf_score, 4) if rrf_score is not None else None,
                     })
         return citations
 

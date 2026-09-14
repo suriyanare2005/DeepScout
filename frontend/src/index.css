@@ -1,218 +1,446 @@
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;0,9..144,800;1,9..144,400&family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+﻿/* ============================================================
+   DEEPSCOUT — GLOBAL DESIGN SYSTEM
+   Warm Anime Editorial Intelligence Platform
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,700;0,9..144,800;1,9..144,400;1,9..144,500&family=Manrope:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* ============================================================
+   BASE RESET & ROOT VARIABLES
+   ============================================================ */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
 :root {
-  font-family: 'Manrope', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-  line-height: 1.5;
+  --c-gold:          #F4C542;
+  --c-gold-dark:     #E9B82E;
+  --c-gold-light:    #FEF3C7;
+  --c-olive:         #7C8460;
+  --c-olive-dark:    #69714F;
+  --c-ivory:         #F6F1E7;
+  --c-cream:         #F7F3E8;
+  --c-charcoal:      #191817;
+  --c-mid:           #252321;
+  --c-warm-gray:     #77736B;
+  --c-muted:         #9E988D;
+  --c-border:        #E5DFD3;
+  --c-text-light:    #5C5850;
+
+  font-family: 'Manrope', system-ui, -apple-system, sans-serif;
+  line-height: 1.55;
   font-weight: 400;
   color-scheme: light;
-  color: #191817;
-  background-color: #7C8460;
-}
-
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-  scrollbar-width: thin;
-  scrollbar-color: #d6cfc4 transparent;
-}
-
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background: #d6cfc4;
-  border-radius: 9999px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: #c5bba8;
-}
-
-body {
-  margin: 0;
-  min-height: 100vh;
-  background: linear-gradient(135deg, #7C8460 0%, #8C946E 50%, #69714F 100%);
-  color: #191817;
-  overflow-x: hidden;
+  color: var(--c-charcoal);
+  background-color: var(--c-olive);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
   font-feature-settings: "cv02", "cv03", "cv04", "cv11";
 }
 
-/* Editorial Display Serif Font Utility */
-.font-editorial {
-  font-family: 'Fraunces', Georgia, serif;
+body {
+  min-height: 100vh;
+  background: linear-gradient(145deg, #7C8460 0%, #8C946E 40%, #6B7354 70%, #7C8460 100%);
+  background-attachment: fixed;
+  color: var(--c-charcoal);
+  overflow-x: hidden;
 }
 
-.font-sans-body {
-  font-family: 'Manrope', sans-serif;
+::selection { background: var(--c-gold); color: var(--c-charcoal); }
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #c5bba8; border-radius: 9999px; }
+::-webkit-scrollbar-thumb:hover { background: #b0a798; }
+* { scrollbar-width: thin; scrollbar-color: #c5bba8 transparent; }
+
+/* ============================================================
+   TYPOGRAPHY
+   ============================================================ */
+
+.font-editorial { font-family: 'Fraunces', Georgia, serif; }
+.font-body      { font-family: 'Manrope', Inter, system-ui, sans-serif; }
+.font-code      { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+
+/* ============================================================
+   WORLD CARD (MAIN PAGE CONTAINER)
+   ============================================================ */
+
+.ds-world {
+  background: rgba(246, 241, 231, 0.93);
+  backdrop-filter: blur(40px) saturate(1.2);
+  -webkit-backdrop-filter: blur(40px) saturate(1.2);
+  border: 1px solid rgba(255,255,255,0.65);
+  border-radius: 32px;
+  box-shadow: 0 40px 80px -20px rgba(25,24,23,0.18), 0 12px 32px -8px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.8);
+  position: relative;
+  overflow: hidden;
 }
 
-/* Subtle Paper Texture Overlay */
-.paper-texture {
-  background-color: #F6F1E7;
-  background-image: radial-gradient(rgba(224, 215, 198, 0.4) 1px, transparent 1px);
-  background-size: 24px 24px;
+.ds-world::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(180,168,148,0.22) 1px, transparent 1px);
+  background-size: 22px 22px;
+  pointer-events: none;
+  border-radius: inherit;
 }
 
-/* Large Main Container "World" (Inspired by Reference) */
-.deepscout-world-card {
-  background: rgba(246, 241, 231, 0.88);
-  backdrop-filter: blur(35px);
-  -webkit-backdrop-filter: blur(35px);
-  border: 1px solid rgba(255, 255, 255, 0.6);
-  border-radius: 36px;
-  box-shadow: 0 30px 80px -20px rgba(25, 24, 23, 0.15), 0 10px 30px -10px rgba(0, 0, 0, 0.05);
-}
+/* ============================================================
+   CARDS
+   ============================================================ */
 
-/* Translucent Soft White Card */
-.card-warm-glass {
-  background: rgba(255, 255, 255, 0.75);
+.ds-card {
+  background: rgba(255,255,255,0.82);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(255,255,255,0.85);
   border-radius: 20px;
-  box-shadow: 0 10px 30px -5px rgba(25, 24, 23, 0.04), 0 2px 6px 0 rgba(0, 0, 0, 0.02);
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 8px 24px -4px rgba(25,24,23,0.07), 0 2px 6px -1px rgba(0,0,0,0.03);
+  transition: all 0.3s cubic-bezier(0.16,1,0.3,1);
 }
 
-.card-warm-glass-hover:hover {
-  background: rgba(255, 255, 255, 0.92);
-  border-color: #F4C542;
-  box-shadow: 0 15px 35px -5px rgba(244, 197, 66, 0.18), 0 4px 12px 0 rgba(0, 0, 0, 0.04);
-  transform: translateY(-2px);
+.ds-card-hover:hover {
+  background: rgba(255,255,255,0.96);
+  border-color: rgba(244,197,66,0.5);
+  box-shadow: 0 16px 40px -8px rgba(244,197,66,0.22), 0 4px 12px -2px rgba(0,0,0,0.06);
+  transform: translateY(-3px);
 }
 
-/* Golden Yellow Pill Primary Button */
-.btn-gold-pill {
-  background: #F4C542;
-  color: #191817;
+.ds-card-feat {
+  background: rgba(255,255,255,0.70);
+  border: 1px solid rgba(229,223,211,0.6);
+  border-radius: 24px;
+  padding: 28px;
+  transition: all 0.3s cubic-bezier(0.16,1,0.3,1);
+  position: relative;
+  overflow: hidden;
+}
+
+.ds-card-feat:hover {
+  background: rgba(255,255,255,0.92);
+  border-color: rgba(244,197,66,0.4);
+  box-shadow: 0 12px 32px -6px rgba(244,197,66,0.20);
+  transform: translateY(-3px);
+}
+
+.ds-card-feat::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, var(--c-gold), transparent);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+.ds-card-feat:hover::after { opacity: 1; }
+
+/* ============================================================
+   BUTTONS
+   ============================================================ */
+
+.btn-gold {
+  background: var(--c-gold);
+  color: var(--c-charcoal);
   border: none;
-  padding: 12px 24px;
+  padding: 13px 28px;
   border-radius: 9999px;
   font-weight: 700;
   font-family: 'Manrope', sans-serif;
   font-size: 13px;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.03em;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 4px 16px rgba(244, 197, 66, 0.35);
+  transition: all 0.22s cubic-bezier(0.16,1,0.3,1);
+  box-shadow: 0 4px 16px rgba(244,197,66,0.40);
+  text-decoration: none;
+  white-space: nowrap;
 }
+.btn-gold:hover:not(:disabled) { background: var(--c-gold-dark); transform: translateY(-2px); box-shadow: 0 8px 28px rgba(244,197,66,0.55); }
+.btn-gold:active:not(:disabled) { transform: translateY(0); box-shadow: 0 2px 8px rgba(244,197,66,0.30); }
+.btn-gold:disabled { opacity: 0.48; cursor: not-allowed; box-shadow: none; }
 
-.btn-gold-pill:hover:not(:disabled) {
-  background: #E9B82E;
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(244, 197, 66, 0.5);
-}
-
-.btn-gold-pill:active:not(:disabled) {
-  transform: translateY(0);
-}
-
-.btn-gold-pill:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  box-shadow: none;
-}
-
-/* Small Golden Circle Button */
-.btn-gold-icon {
-  width: 38px;
-  height: 38px;
+.btn-ghost {
+  background: rgba(255,255,255,0.78);
+  color: var(--c-charcoal);
+  border: 1px solid rgba(229,223,211,0.85);
+  padding: 12px 24px;
   border-radius: 9999px;
-  background: #F4C542;
-  color: #191817;
-  display: flex;
+  font-weight: 600;
+  font-family: 'Manrope', sans-serif;
+  font-size: 13px;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
+  gap: 8px;
+  transition: all 0.22s cubic-bezier(0.16,1,0.3,1);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.btn-ghost:hover:not(:disabled) { background: rgba(255,255,255,0.98); border-color: rgba(244,197,66,0.5); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(25,24,23,0.06); }
+.btn-ghost:disabled { opacity: 0.48; cursor: not-allowed; }
+
+.btn-icon {
+  width: 42px; height: 42px;
+  border-radius: 9999px;
+  background: var(--c-gold);
+  color: var(--c-charcoal);
+  display: flex; align-items: center; justify-content: center;
   border: none;
   cursor: pointer;
-  box-shadow: 0 3px 10px rgba(244, 197, 66, 0.3);
-  transition: all 0.2s ease;
+  box-shadow: 0 3px 10px rgba(244,197,66,0.35);
+  transition: all 0.22s cubic-bezier(0.16,1,0.3,1);
+  flex-shrink: 0;
 }
+.btn-icon:hover:not(:disabled) { background: var(--c-gold-dark); transform: scale(1.1); box-shadow: 0 6px 18px rgba(244,197,66,0.52); }
+.btn-icon:disabled { opacity: 0.40; cursor: not-allowed; }
 
-.btn-gold-icon:hover {
-  background: #E9B82E;
-  transform: scale(1.08) rotate(5deg);
-}
+/* ============================================================
+   FORM INPUT
+   ============================================================ */
 
-/* Soft Cream Input Field */
-.input-warm {
-  background: rgba(255, 255, 255, 0.9);
-  border: 1.5px solid #E5DFD3;
+.ds-input {
+  background: rgba(255,255,255,0.92);
+  border: 1.5px solid var(--c-border);
   padding: 14px 20px;
   border-radius: 16px;
-  color: #191817;
+  color: var(--c-charcoal);
   font-size: 14px;
   font-family: 'Manrope', sans-serif;
   outline: none;
   transition: all 0.2s ease;
   width: 100%;
+  line-height: 1.5;
+}
+.ds-input::placeholder { color: var(--c-muted); }
+.ds-input:focus { border-color: var(--c-gold); box-shadow: 0 0 0 4px rgba(244,197,66,0.18); background: #fff; }
+.ds-input:disabled { opacity: 0.58; cursor: not-allowed; }
+
+/* ============================================================
+   BADGES
+   ============================================================ */
+
+.ds-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 10px; padding: 3px 10px; border-radius: 9999px;
+  font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
+}
+.ds-badge-gold      { background: #FEF3C7; color: #92400E; }
+.ds-badge-green     { background: #D1FAE5; color: #065F46; }
+.ds-badge-olive     { background: rgba(124,132,96,0.15); color: #4A5230; }
+.ds-badge-services  { background: #FEF3C7; color: #92400E; }
+.ds-badge-careers   { background: #D1FAE5; color: #065F46; }
+.ds-badge-investors { background: #FFEDD5; color: #9A3412; }
+.ds-badge-news      { background: #FEE2E2; color: #991B1B; }
+.ds-badge-about     { background: #EDE9FE; color: #5B21B6; }
+.ds-badge-general   { background: #F3F4F6; color: #374151; }
+
+/* ============================================================
+   NAVIGATION
+   ============================================================ */
+
+.ds-navbar {
+  position: sticky; top: 16px; z-index: 50;
+  padding: 0 16px; margin-bottom: 28px;
 }
 
-.input-warm::placeholder {
-  color: #9E988D;
-}
-
-.input-warm:focus {
-  border-color: #F4C542;
-  box-shadow: 0 0 0 4px rgba(244, 197, 66, 0.2);
-  background: #ffffff;
-}
-
-/* Source Category Badges */
-.badge-warm {
-  font-size: 10px;
-  padding: 3px 9px;
+.ds-navbar-inner {
+  max-width: 1280px; margin: 0 auto;
+  background: rgba(255,255,255,0.88);
+  backdrop-filter: blur(28px) saturate(1.2);
+  -webkit-backdrop-filter: blur(28px) saturate(1.2);
+  border: 1px solid rgba(255,255,255,0.92);
   border-radius: 9999px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  padding: 10px 20px;
+  display: flex; align-items: center; justify-content: space-between;
+  box-shadow: 0 8px 24px -4px rgba(25,24,23,0.10), 0 2px 6px -1px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.9);
 }
 
-.badge-warm.services { background: #FEF3C7; color: #92400E; }
-.badge-warm.careers { background: #D1FAE5; color: #065F46; }
-.badge-warm.investors { background: #FFEDD5; color: #9A3412; }
-.badge-warm.news { background: #FEE2E2; color: #991B1B; }
-.badge-warm.about { background: #EDE9FE; color: #5B21B6; }
-.badge-warm.general { background: #F3F4F6; color: #374151; }
-
-/* Gentle Floating Animation */
-@keyframes floatGentle {
-  0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-8px); }
+.ds-nav-pill-bar {
+  display: flex; align-items: center; gap: 2px;
+  background: rgba(246,241,231,0.80);
+  padding: 4px; border-radius: 9999px;
+  border: 1px solid rgba(229,223,211,0.5);
 }
 
-.animate-float-gentle {
-  animation: floatGentle 4.5s ease-in-out infinite;
+.ds-nav-link {
+  padding: 7px 16px; border-radius: 9999px;
+  font-size: 12px; font-weight: 600;
+  font-family: 'Manrope', sans-serif;
+  text-decoration: none;
+  transition: all 0.2s cubic-bezier(0.16,1,0.3,1);
+  color: var(--c-warm-gray);
+  white-space: nowrap;
+  cursor: pointer; border: none; background: transparent;
+  display: flex; align-items: center; gap: 5px;
 }
+.ds-nav-link:hover { color: var(--c-charcoal); background: rgba(255,255,255,0.6); }
+.ds-nav-link.active { background: var(--c-gold); color: var(--c-charcoal); font-weight: 700; box-shadow: 0 2px 8px rgba(244,197,66,0.35); }
 
-@keyframes floatGentleReverse {
-  0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(8px); }
+/* ============================================================
+   SKELETON
+   ============================================================ */
+
+@keyframes skeletonShimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
 }
-
-.animate-float-reverse {
-  animation: floatGentleReverse 5s ease-in-out infinite;
-}
-
-/* Subtle Shimmer for Warm Cards */
-@keyframes warmShimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-}
-
-.skeleton-warm {
-  background: linear-gradient(90deg, rgba(238, 230, 218, 0.6) 25%, rgba(250, 246, 238, 0.9) 37%, rgba(238, 230, 218, 0.6) 63%);
+.ds-skeleton {
+  background: linear-gradient(90deg, rgba(229,223,211,0.6) 25%, rgba(246,241,231,0.9) 37%, rgba(229,223,211,0.6) 63%);
   background-size: 400% 100%;
-  animation: warmShimmer 1.5s ease infinite;
+  animation: skeletonShimmer 1.4s ease infinite;
+  border-radius: 16px;
+}
+
+/* ============================================================
+   PIPELINE STEP
+   ============================================================ */
+
+.ds-step {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  padding: 16px 12px; border-radius: 20px;
+  background: rgba(255,255,255,0.65);
+  border: 1px solid rgba(229,223,211,0.5);
+  transition: all 0.3s ease; cursor: default;
+  text-align: center;
+}
+.ds-step:hover { background: rgba(255,255,255,0.92); border-color: rgba(244,197,66,0.5); transform: translateY(-4px); box-shadow: 0 12px 28px -6px rgba(244,197,66,0.22); }
+.ds-step.active { background: var(--c-gold); border-color: var(--c-gold-dark); box-shadow: 0 8px 20px -4px rgba(244,197,66,0.45); }
+.ds-step.done   { background: rgba(209,250,229,0.7); border-color: rgba(6,95,70,0.2); }
+.ds-step.error  { background: rgba(254,226,226,0.7); border-color: rgba(153,27,27,0.2); }
+
+/* ============================================================
+   CHAT MESSAGES
+   ============================================================ */
+
+.ds-msg-user {
+  background: var(--c-charcoal);
+  color: #fff;
+  border-radius: 24px 24px 4px 24px;
+  padding: 14px 20px;
+  font-size: 13px; line-height: 1.65;
+  box-shadow: 0 4px 12px -2px rgba(25,24,23,0.22);
+}
+
+.ds-msg-ai {
+  background: rgba(255,255,255,0.90);
+  border: 1px solid rgba(229,223,211,0.7);
+  border-radius: 4px 24px 24px 24px;
+  padding: 16px 22px;
+  font-size: 13px; line-height: 1.72;
+  box-shadow: 0 4px 16px -4px rgba(25,24,23,0.06);
+}
+
+/* ============================================================
+   CITATION CHIPS
+   ============================================================ */
+
+.ds-citation {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 4px 12px; border-radius: 9999px;
+  background: rgba(255,255,255,0.9);
+  border: 1px solid var(--c-border);
+  font-size: 11px; font-weight: 600;
+  color: var(--c-charcoal);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+}
+.ds-citation:hover { background: #FEF3C7; border-color: var(--c-gold); color: #92400E; transform: translateY(-1px); box-shadow: 0 3px 10px rgba(244,197,66,0.25); }
+
+/* ============================================================
+   DRAWER / MODAL
+   ============================================================ */
+
+.ds-drawer-bg {
+  position: fixed; inset: 0;
+  background: rgba(25,24,23,0.35);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  z-index: 50;
+  display: flex; justify-content: flex-end;
+}
+.ds-drawer {
+  width: 100%; max-width: 440px;
+  background: rgba(250,246,238,0.98);
+  height: 100%; padding: 32px;
+  overflow-y: auto;
+  display: flex; flex-direction: column; gap: 24px;
+  box-shadow: -8px 0 40px -8px rgba(25,24,23,0.20);
+  border-left: 1px solid rgba(255,255,255,0.6);
+  animation: slideInFromRight 0.3s cubic-bezier(0.16,1,0.3,1) both;
+}
+@keyframes slideInFromRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+/* ============================================================
+   PIPELINE CONNECTOR
+   ============================================================ */
+
+.ds-pipe-line {
+  flex: 1; height: 2px;
+  background: linear-gradient(90deg, rgba(229,223,211,0.4), rgba(244,197,66,0.5), rgba(229,223,211,0.4));
+  position: relative; overflow: hidden;
+}
+.ds-pipe-line::after {
+  content: '';
+  position: absolute; top: 0; left: -100%; width: 100%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(244,197,66,0.8), transparent);
+  animation: pipeFlow 2.5s ease-in-out infinite;
+}
+@keyframes pipeFlow { 0% { left: -100%; } 100% { left: 100%; } }
+
+/* ============================================================
+   ANIMATIONS (non-Tailwind usage)
+   ============================================================ */
+
+@keyframes floatUp   { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+@keyframes floatDown { 0%,100% { transform: translateY(0); } 50% { transform: translateY(8px); } }
+@keyframes fadeInUp  { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
+@keyframes spinSlow  { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+@keyframes pulseSoft { 0%,100% { opacity:0.5; transform:scale(1); } 50% { opacity:1; transform:scale(1.06); } }
+
+.anim-float      { animation: floatUp   4.5s ease-in-out infinite; }
+.anim-float-down { animation: floatDown 5.0s ease-in-out infinite; }
+.anim-fade-up    { animation: fadeInUp  0.6s ease-out both; }
+.anim-spin-slow  { animation: spinSlow  10s linear infinite; }
+.anim-pulse-soft { animation: pulseSoft 3s ease-in-out infinite; }
+
+.delay-100 { animation-delay: 0.1s; }
+.delay-200 { animation-delay: 0.2s; }
+.delay-300 { animation-delay: 0.3s; }
+.delay-400 { animation-delay: 0.4s; }
+.delay-500 { animation-delay: 0.5s; }
+
+/* ============================================================
+   SECTION LABELS / DIVIDERS
+   ============================================================ */
+
+.ds-label {
+  font-size: 10px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.12em;
+  color: var(--c-olive);
+  font-family: 'Manrope', sans-serif;
+}
+.ds-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--c-border), transparent);
+}
+
+/* ============================================================
+   HOME PAGE DECORATIVE RINGS
+   ============================================================ */
+
+.ds-ring {
+  border-radius: 9999px;
+  border: 1.5px dashed rgba(244,197,66,0.35);
+  position: absolute;
+  pointer-events: none;
 }
