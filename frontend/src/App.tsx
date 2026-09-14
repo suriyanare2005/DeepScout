@@ -868,6 +868,7 @@ function DirectoryPage() {
   const [companies, setCompanies] = useState<CompanyItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -878,6 +879,24 @@ function DirectoryPage() {
       finally { setLoading(false); }
     })();
   }, []);
+
+  const handleDelete = async (e: React.MouseEvent, companyId: string, companyName: string) => {
+    e.stopPropagation();
+    if (!confirm(`Remove "${companyName}" and all its indexed data? This cannot be undone.`)) return;
+    setDeletingId(companyId);
+    try {
+      const res = await fetch(`${API_BASE}/api/companies/${companyId}`, { method: "DELETE" });
+      if (res.ok) {
+        setCompanies(prev => prev.filter(c => c.id !== companyId));
+      } else {
+        alert("Failed to delete company. Please try again.");
+      }
+    } catch {
+      alert("Connection error while deleting.");
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   const filtered = companies.filter(c =>
     c.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -920,11 +939,32 @@ function DirectoryPage() {
         ) : (
           <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))", gap:20 }}>
             {filtered.map(c => (
-              <div key={c.id} className="ds-card ds-card-hover" style={{ padding:"24px", cursor:"pointer", display:"flex", flexDirection:"column", gap:14 }}
+              <div key={c.id} className="ds-card ds-card-hover" style={{ padding:"24px", cursor:"pointer", display:"flex", flexDirection:"column", gap:14, position:"relative" }}
                 onClick={() => navigate(`/research/${c.id}`)}>
                 <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
                   <span className="ds-badge ds-badge-green">● READY</span>
-                  <Clock size={13} color="#9E988D"/>
+                  <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                    <Clock size={13} color="#9E988D"/>
+                    {/* Delete button */}
+                    <button
+                      onClick={(e) => handleDelete(e, c.id, c.name)}
+                      disabled={deletingId === c.id}
+                      title="Remove company"
+                      style={{
+                        padding:"4px 6px", border:"1px solid rgba(229,223,211,0.7)", borderRadius:8,
+                        background:"rgba(255,255,255,0.8)", cursor:"pointer", display:"flex", alignItems:"center",
+                        color: "#991B1B", opacity: deletingId === c.id ? 0.5 : 1, transition:"all 0.15s",
+                        lineHeight:1
+                      }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(254,226,226,0.9)"; (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(153,27,27,0.3)"; }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.8)"; (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(229,223,211,0.7)"; }}
+                    >
+                      {deletingId === c.id
+                        ? <Loader2 size={12} style={{ animation:"spin 1s linear infinite" }} color="#991B1B"/>
+                        : <XCircle size={12} color="#991B1B"/>
+                      }
+                    </button>
+                  </div>
                 </div>
                 <div>
                   <h3 className="font-editorial" style={{ fontSize:17, fontWeight:700, color:"#191817", lineHeight:1.3, marginBottom:4 }}>{c.name}</h3>
@@ -942,6 +982,7 @@ function DirectoryPage() {
     </div>
   );
 }
+
 
 /* ── SOURCES PAGE ── */
 function SourcesPage() {

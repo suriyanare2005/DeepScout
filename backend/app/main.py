@@ -341,6 +341,32 @@ async def list_companies(db: AsyncSession = Depends(get_db)):
         })
     return results
 
+@app.delete("/api/companies/{company_id}", status_code=200)
+async def delete_company(company_id: str, db: AsyncSession = Depends(get_db)):
+    """
+    Deletes a company and ALL associated data:
+    chunks, documents, sources, ingestion jobs, research history, and the company record.
+    """
+    from sqlalchemy import delete as sql_delete
+    from backend.app.db.models import ResearchQuestion, Source, Document, Chunk, IngestionJob
+
+    stmt = select(Company).where(Company.id == company_id)
+    res = await db.execute(stmt)
+    company = res.scalar_one_or_none()
+    if not company:
+        raise HTTPException(status_code=404, detail="Company not found.")
+
+    # Cascade-delete all related records in dependency order
+    await db.execute(sql_delete(Chunk).where(Chunk.company_id == company_id))
+    await db.execute(sql_delete(Document).where(Document.company_id == company_id))
+    await db.execute(sql_delete(Source).where(Source.company_id == company_id))
+    await db.execute(sql_delete(IngestionJob).where(IngestionJob.company_id == company_id))
+    await db.execute(sql_delete(ResearchQuestion).where(ResearchQuestion.company_id == company_id))
+    await db.delete(company)
+    await db.commit()
+
+    return {"deleted": True, "company_id": company_id}
+
 @app.get("/api/companies/{company_id}/history")
 async def get_company_history(company_id: str, db: AsyncSession = Depends(get_db)):
     stmt = select(ResearchQuestion).where(ResearchQuestion.company_id == company_id).order_by(ResearchQuestion.created_at.desc())
