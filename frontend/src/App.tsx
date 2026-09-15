@@ -10,9 +10,10 @@ import {
 } from "lucide-react";
 
 const API_BASE =
-  window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
+  window.location.hostname === "localhost" ||
+  window.location.hostname === "127.0.0.1"
     ? "http://localhost:8000"
-    : window.location.origin;
+    : import.meta.env.VITE_API_URL;
 
 interface CompanyItem {
   id: string;
